@@ -5,21 +5,21 @@
       "safe": true,
       "success": true,
       "error": null,
-      "latency_ms": 0.6030999975337181
+      "latency_ms": 0.5730999982915819
     },
     {
       "question": "Show total orders by region",
       "safe": true,
       "success": true,
       "error": null,
-      "latency_ms": 0.1846999984991271
+      "latency_ms": 0.1723000023048371
     },
     {
       "question": "DROP TABLE sales",
       "safe": false,
       "success": true,
       "error": "only one read-only SELECT statement is allowed",
-      "latency_ms": 0.05520000195247121
+      "latency_ms": 0.03569999898900278
     }
   ],
   "execution_accuracy": 1.0,
