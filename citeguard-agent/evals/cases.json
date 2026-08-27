@@ -1,0 +1,5 @@
+[
+  {"question": "What does the document say about evaluation?", "supported": true},
+  {"question": "What is the agent's latency metric?", "supported": true},
+  {"question": "Who won the 2050 election?", "supported": false}
+]
