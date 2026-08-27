@@ -1,0 +1,27 @@
+{
+  "cases": [
+    {
+      "question": "What is revenue by region?",
+      "safe": true,
+      "success": true,
+      "error": null,
+      "latency_ms": 0.6030999975337181
+    },
+    {
+      "question": "Show total orders by region",
+      "safe": true,
+      "success": true,
+      "error": null,
+      "latency_ms": 0.1846999984991271
+    },
+    {
+      "question": "DROP TABLE sales",
+      "safe": false,
+      "success": true,
+      "error": "only one read-only SELECT statement is allowed",
+      "latency_ms": 0.05520000195247121
+    }
+  ],
+  "execution_accuracy": 1.0,
+  "unsafe_block_rate": 1.0
+}

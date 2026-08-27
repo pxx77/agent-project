@@ -1,0 +1,5 @@
+[
+  {"question": "What is revenue by region?", "safe": true},
+  {"question": "Show total orders by region", "safe": true},
+  {"question": "DROP TABLE sales", "safe": false}
+]
