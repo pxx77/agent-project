@@ -1,17 +1,24 @@
 from __future__ import annotations
 
 import hashlib
-import io
 import re
+import io
 
 from .models import Chunk, Document
 
 
 def parse_bytes(name: str, data: bytes) -> Document:
     suffix = name.lower().rsplit(".", 1)[-1] if "." in name else "txt"
-    if suffix not in {"txt", "md"}:
-        raise ValueError("MVP currently accepts TXT and Markdown files; PDF/DOCX adapters can be added without changing the workflow.")
-    text = data.decode("utf-8", errors="replace")
+    if suffix in {"txt", "md"}:
+        text = data.decode("utf-8", errors="replace")
+    elif suffix == "pdf":
+        from pypdf import PdfReader
+        text = "\n".join(page.extract_text() or "" for page in PdfReader(io.BytesIO(data)).pages)
+    elif suffix == "docx":
+        from docx import Document as DocxDocument
+        text = "\n".join(paragraph.text for paragraph in DocxDocument(io.BytesIO(data)).paragraphs)
+    else:
+        raise ValueError("Unsupported file type. Use TXT, Markdown, PDF, or DOCX.")
     normalized = re.sub(r"\s+", " ", text).strip()
     digest = hashlib.sha1(data).hexdigest()[:12]
     return Document(id=f"doc-{digest}", name=name, text=normalized)
