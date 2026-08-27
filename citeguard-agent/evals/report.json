@@ -1,0 +1,34 @@
+{
+  "cases": [
+    {
+      "question": "What does the document say about evaluation?",
+      "expected_supported": true,
+      "citations": [
+        "fixture:0"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "latency_ms": 0.07139999797800556
+    },
+    {
+      "question": "What is the agent's latency metric?",
+      "expected_supported": true,
+      "citations": [
+        "fixture:0"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "latency_ms": 0.024599998141638935
+    },
+    {
+      "question": "Who won the 2050 election?",
+      "expected_supported": false,
+      "citations": [],
+      "status": "insufficient_evidence",
+      "support_rate": 0.0,
+      "latency_ms": 0.016199999663513154
+    }
+  ],
+  "success_rate": 1.0,
+  "citation_resolvability": 1.0
+}
