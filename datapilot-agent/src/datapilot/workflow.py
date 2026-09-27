@@ -69,8 +69,9 @@ def _looks_temporal(name: str, values: list[object]) -> bool:
     return bool(sample) and all(_TEMPORAL_VALUE.match(value) for value in sample[:5])
 
 
-def _choose_chart(result: QueryResult) -> ChartSpec | None:
-    """Pick a chart only when the returned shape actually supports one."""
+def choose_chart(result: QueryResult) -> ChartSpec | None:
+    """Pick a chart only when the returned shape actually supports one. Public because
+    the MCP tool ``make_chart_spec`` reuses it instead of keeping a second heuristic."""
     if result.error is not None or len(result.columns) < 2 or not result.rows:
         return None
     x_index, y_index = 0, len(result.columns) - 1
@@ -136,7 +137,7 @@ def run_agent(question: str, handle: DatasetHandle, client=None) -> AgentResult:
         result = execute_sql(handle, sql, settings.max_rows)
 
     trace.states.extend(["visualize", "verify"])
-    chart = _choose_chart(result)
+    chart = choose_chart(result)
     consistent = result.error is None and bool(result.columns)
     trace.status = "success" if consistent else "failed"
     trace.duration_ms = (time.perf_counter() - started) * 1000

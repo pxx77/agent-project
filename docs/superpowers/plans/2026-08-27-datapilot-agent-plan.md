@@ -224,7 +224,7 @@ git add datapilot-agent/src/datapilot/llm.py datapilot-agent/src/datapilot/workf
 git commit -m "feat(datapilot): add safe analysis workflow"
 ```
 
-### Task 5: API, UI, MCP-compatible tools, and evaluation
+### Task 5: API, UI, MCP server, and evaluation
 
 **Files:**
 - Create: `datapilot-agent/src/datapilot/api.py`
@@ -241,7 +241,7 @@ git commit -m "feat(datapilot): add safe analysis workflow"
 - `GET /health -> {"status": "ok", "mock": bool}`.
 - `POST /profile` accepts one multipart data file and returns the `Profile`.
 - `POST /ask` accepts `{"question": str}` and returns serialized `AgentResult`.
-- MCP tools: `get_schema()`, `run_safe_query(sql)`, and `make_chart_spec(columns, rows)` return JSON-safe dictionaries.
+- MCP tools: `get_schema()`, `run_safe_query(sql)`, and `make_chart_spec(columns, rows)` return JSON-safe dictionaries over stdio, with input schemas that the transport validates.
 - `python evals/run_eval.py --mock --output evals/report.json` writes execution accuracy, repair success, unsafe-query blocking, average latency, and per-case results.
 
 - [ ] **Step 1: Write failing API and eval assertions**
@@ -265,7 +265,7 @@ Expected: FAIL because the API does not exist.
 
 - [ ] **Step 3: Write minimal implementation**
 
-Keep one in-memory fixture handle per process for the MVP. The Streamlit UI shows profile, question, generated SQL, policy decision, result table, chart, conclusion, and trace. Build twenty cases: ten aggregations, five filter/group tasks, and five unsafe SQL prompts that must be blocked. Add README commands, Mermaid architecture, resume bullets based on measured results, and Dockerfile syntax.
+Keep one in-memory fixture handle per process for the MVP. The Streamlit UI shows profile, question, generated SQL, policy decision, result table, chart, conclusion, and trace. The MCP server reads the same dataset handle the API serves through `src/datapilot/state.py`; `run_safe_query` goes through the agent's own policy gate and `make_chart_spec` reuses `workflow.choose_chart`, so a client cannot obtain a result the agent itself would refuse. Build twenty cases: ten aggregations, five filter/group tasks, and five unsafe SQL prompts that must be blocked. Add README commands, Mermaid architecture, resume bullets based on measured results, and Dockerfile syntax.
 
 - [ ] **Step 4: Run full verification**
 

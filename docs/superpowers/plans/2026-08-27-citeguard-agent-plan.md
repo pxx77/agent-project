@@ -176,7 +176,7 @@ git add citeguard-agent/src/citeguard/llm.py citeguard-agent/src/citeguard/workf
 git commit -m "feat(citeguard): add verified research workflow"
 ```
 
-### Task 4: API, Streamlit UI, and MCP-compatible tools
+### Task 4: API, Streamlit UI, and MCP server
 
 **Files:**
 - Create: `citeguard-agent/src/citeguard/api.py`
@@ -188,7 +188,7 @@ git commit -m "feat(citeguard): add verified research workflow"
 - `GET /health -> {"status": "ok", "mock": bool}`.
 - `POST /ingest` accepts multipart files and returns `{"document_id": str, "chunks": int}`.
 - `POST /ask` accepts `{"question": str}` and returns serialized `AgentResult`.
-- MCP tools: `search_documents(query, limit)` and `get_chunk(chunk_id)` return JSON-safe dictionaries.
+- MCP tools: `search_documents(query, limit)` and `get_chunk(chunk_id)` return JSON-safe dictionaries over stdio, with input schemas that the transport validates.
 
 - [ ] **Step 1: Write the failing API tests**
 
@@ -211,7 +211,7 @@ Expected: FAIL because the FastAPI app does not exist.
 
 - [ ] **Step 3: Write minimal implementation**
 
-Keep an in-memory index per process for the MVP. Limit upload size and return HTTP 400 for unsupported files. The Streamlit page provides file upload, question input, answer, evidence, and expandable trace sections. MCP server functions call the same index methods and do not create external side effects.
+Keep an in-memory index per process for the MVP. Limit upload size and return HTTP 400 for unsupported files. The Streamlit page provides file upload, question input, answer, evidence, and expandable trace sections. The MCP server reads the same index the API serves through `src/citeguard/state.py` and exposes only read-only tools, so it creates no external side effects and offers no verdict the agent itself would not produce.
 
 - [ ] **Step 4: Run tests to verify they pass**
 

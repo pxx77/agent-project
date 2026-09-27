@@ -51,7 +51,7 @@ powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File tools\deepseek_launc
 
 它会解密 Key、把 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL` 与 `DATAPILOT_MOCK=0` 注入当前进程，用本项目 venv 跑 `evals/run_eval.py --live`，结果写到 `evals/report.live.json`，不覆盖上面这份 mock 基线；结束时无论成败都会还原进程内的环境变量。脚本会读回报告校验 `mode`，只要不是 `live` 就直接判失败退出，因此不存在以为是真实数字、其实是离线回放的误读。注意 live 只换掉 mock 类样例的 SQL 生成，scripted 类样例仍是脚本化探针，所以 `repair_success_rate`、`bounded_failure_rate` 由管线决定，而 `unsafe_block_rate` 的分母里有 2 条 mock 类危险请求，会随模型行为变化。
 
-单元测试 27 项：
+单元测试 40 项，覆盖只读策略、执行、修复重试、字段画像、API、配置与 MCP server：
 
 ```bash
 uv run --extra dev pytest -q
@@ -75,6 +75,27 @@ uv run --extra dev uvicorn datapilot.api:app --reload --port 8766
 浏览器打开 `http://127.0.0.1:8766/docs` 可直接上传数据并提问，接口是 `/health`、`/profile`、`/ask` 三个：先 `POST /profile` 上传文件并看字段画像，再 `POST /ask` 提交问题。Streamlit 界面入口是 `src/datapilot/ui.py`，默认端口 8501，可以查看字段画像、生成的 SQL、结果表格与运行轨迹。仓库根目录的 `一键启动两个项目.bat` 会同时拉起两个项目。
 
 支持 CSV、XLSX、SQLite，单次载入行数默认上限 1000，由 `MAX_ROWS` 控制。
+
+## MCP
+
+`src/datapilot/mcp_server.py` 是一个真实的 MCP server，通过 stdio 暴露三个只读工具：
+
+| 工具 | 参数 | 返回 |
+| --- | --- | --- |
+| `get_schema` | 无 | 当前数据集的表名、行数，以及每列的推断类型、空值数与示例值 |
+| `run_safe_query` | `sql`（必填） | 列、行、行数；非只读语句返回 `policy_blocked=true` |
+| `make_chart_spec` | `columns`、`rows`（必填） | 与 agent 同源的图表规格，形状不支持时返回 `kind="table"` |
+
+`run_safe_query` 走的是 agent 同一条策略闸门和同一个内存 SQLite 引擎，所以被 agent 拒绝的语句在这里同样被拒绝，并且以 `policy_blocked=true` 作为数据返回，而不是抛异常——客户端因此能区分「语句被策略拦下」和「服务本身出错」。`make_chart_spec` 直接复用 `workflow.choose_chart`，客户端拿不到 agent 自己不会画的图。数据集由 `src/datapilot/state.py` 统一持有，HTTP API 与 MCP 读写的是同一个对象，所以 `POST /profile` 上传的数据对 MCP 工具同样可见。
+
+```bash
+uv sync --extra mcp
+uv run --extra mcp python -m datapilot.mcp_server
+```
+
+客户端配置里把 command 指向该解释器、args 写 `-m datapilot.mcp_server` 即可。MCP 是可选依赖：`mcp==1.13.1` 并同时锁 `sse-starlette==2.4.1`，因为 `mcp` 默认会拉进 sse-starlette 3.x，进而升到与本项目 `fastapi` 不兼容的 starlette。
+
+`tests/test_mcp_server.py` 有 13 项测试，用官方 `ClientSession` 走真实协议，覆盖工具名与 JSON Schema、结构化返回、缺参被 schema 拦住、未知工具报错，以及两条关键行为的区分：被策略拦下返回 `policy_blocked=true`（不是异常），真正写错的 SQL 返回 `error` 而 `policy_blocked=false`；另外逐条比对 `run_safe_query` 的判定与 `validate_sql` 一致，确保 MCP 不是一条更宽松的入口。其中一项用 stdio 客户端拉起子进程 `python -m datapilot.mcp_server`，确保这里写的启动命令真的可用。
 
 ## 边界
 

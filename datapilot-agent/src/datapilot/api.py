@@ -1,8 +1,9 @@
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 
+from . import state
 from .config import Settings
-from .ingestion import load_bytes, load_fixture
+from .ingestion import load_bytes
 from .models import AgentResult
 from .workflow import run_agent
 
@@ -23,7 +24,6 @@ app = FastAPI(
         {"name": "2. 提问", "description": "针对最近上传的数据生成并执行安全只读 SQL。"},
     ],
 )
-_handle = load_fixture()
 
 
 class AskRequest(BaseModel):
@@ -75,12 +75,13 @@ def health():
 )
 async def profile(file: UploadFile = File(...)):
     from .profiling import profile_dataset
-    global _handle
+
     try:
-        _handle = load_bytes(file.filename or "data.csv", await file.read())
+        handle = load_bytes(file.filename or "data.csv", await file.read())
     except (ValueError, OSError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return profile_dataset(_handle).model_dump()
+    state.set_handle(handle)
+    return profile_dataset(handle).model_dump()
 
 
 @app.post(
@@ -92,4 +93,4 @@ async def profile(file: UploadFile = File(...)):
     response_description="包含安全 SQL、查询结果、图表规格、验证结果和模型调用轨迹。",
 )
 def ask(request: AskRequest):
-    return run_agent(request.question, _handle).model_dump()
+    return run_agent(request.question, state.get_handle()).model_dump()

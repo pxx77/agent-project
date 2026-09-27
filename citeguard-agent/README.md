@@ -56,7 +56,7 @@ powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File tools\deepseek_launc
 
 它会解密 Key、把 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL` 与 `CITEGUARD_MOCK=0` 注入当前进程，用本项目 venv 跑 `evals/run_eval.py --live`，结果写到 `evals/report.live.json`，不覆盖上面这份 mock 基线；结束时无论成败都会还原进程内的环境变量。脚本会读回报告校验 `mode`，只要不是 `live` 就直接判失败退出，因此不存在以为是真实数字、其实是离线回放的误读。每次运行都会真实调用 DeepSeek 并覆盖 `evals/report.live.json`。
 
-单元测试 31 项，覆盖分词、BM25 排序、相关性下限、核验状态流转、API 与配置：
+单元测试 43 项，覆盖分词、BM25 排序、相关性下限、核验状态流转、API、配置与 MCP server：
 
 ```bash
 uv run --extra dev pytest -q
@@ -80,6 +80,26 @@ uv run --extra dev uvicorn citeguard.api:app --reload --port 8765
 浏览器打开 `http://127.0.0.1:8765/docs` 可以直接上传文档并提问，接口只有 `/health`、`/ingest`、`/ask` 三个。Streamlit 界面入口是 `src/citeguard/ui.py`，端口 8502。仓库根目录的 `一键启动两个项目.bat` 会同时拉起 CiteGuard 与 DataPilot；Key 由 `tools/deepseek_launcher.ps1` 用 Windows DPAPI 加密存在用户目录下，不落在仓库里。
 
 支持上传 TXT、Markdown、PDF、DOCX，单个文件默认上限 10 MB。文档切块默认 700 字符、重叠 100 字符。
+
+## MCP
+
+`src/citeguard/mcp_server.py` 是一个真实的 MCP server，通过 stdio 暴露两个只读工具：
+
+| 工具 | 参数 | 返回 |
+| --- | --- | --- |
+| `search_documents` | `query`（必填）、`limit`（1–50，默认 5） | 按 BM25 排序的片段，含 `id`、`document_id` 与 `text` |
+| `get_chunk` | `chunk_id`（必填） | 该片段全文；id 不存在时返回 `found=false`，不抛异常 |
+
+两个工具都只是同一份索引上的只读适配器：索引由 `src/citeguard/state.py` 统一持有，HTTP API 与 MCP 读写的是同一个对象，所以 `POST /ingest` 上传的文档对 MCP 工具同样可见。这里刻意没有「验证结论」工具——核验依赖 agent 的多步流程，MCP 侧只交出原文片段，不代替 agent 给出裁决。
+
+```bash
+uv sync --extra mcp
+uv run --extra mcp python -m citeguard.mcp_server
+```
+
+客户端配置里把 command 指向该解释器、args 写 `-m citeguard.mcp_server` 即可。MCP 是可选依赖：`mcp==1.13.1` 并同时锁 `sse-starlette==2.4.1`，因为 `mcp` 默认会拉进 sse-starlette 3.x，进而升到与本项目 `fastapi` 不兼容的 starlette。
+
+`tests/test_mcp_server.py` 有 12 项测试，用官方 `ClientSession` 走真实协议，覆盖工具名与 JSON Schema、结构化返回、`limit` 越界与缺参被 schema 拦住、未知工具与未知 chunk id 的区分。其中一项用 stdio 客户端拉起子进程 `python -m citeguard.mcp_server`，确保这里写的启动命令真的可用。
 
 ## 边界
 

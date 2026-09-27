@@ -3,11 +3,12 @@ from __future__ import annotations
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 
+from . import state
 from .config import Settings
 from .ingestion import chunk_document, parse_bytes
 from .models import AgentResult
 from .retrieval import BM25Index
-from .workflow import build_fixture_agent, run_agent
+from .workflow import run_agent
 
 app = FastAPI(
     title="CiteGuard 文档研究 Agent",
@@ -26,7 +27,6 @@ app = FastAPI(
         {"name": "2. 提问", "description": "针对最近上传的文档运行检索、回答和验证。"},
     ],
 )
-_index = build_fixture_agent().index
 
 
 class AskRequest(BaseModel):
@@ -81,9 +81,9 @@ async def ingest(file: UploadFile = File(...)) -> dict:
         document = parse_bytes(file.filename or "upload.txt", await file.read())
     except (ValueError, OSError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    global _index
-    _index = BM25Index(chunk_document(document))
-    return {"document_id": document.id, "chunks": len(_index.chunks)}
+    index = BM25Index(chunk_document(document))
+    state.set_index(index)
+    return {"document_id": document.id, "chunks": len(index.chunks)}
 
 
 @app.post(
@@ -95,4 +95,4 @@ async def ingest(file: UploadFile = File(...)) -> dict:
     response_description="包含回答、引用证据、验证结果和模型调用轨迹。",
 )
 def ask(request: AskRequest) -> AgentResult:
-    return run_agent(request.question, _index)
+    return run_agent(request.question, state.get_index())

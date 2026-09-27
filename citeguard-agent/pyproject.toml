@@ -20,7 +20,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest==8.4.1"]
+# sse-starlette is pinned because mcp pulls sse-starlette>=3, which would drag in
+# starlette 1.x and break fastapi==0.116.1 (starlette <0.48).
+mcp = ["mcp==1.13.1", "sse-starlette==2.4.1"]
+dev = ["pytest==8.4.1", "mcp==1.13.1", "sse-starlette==2.4.1"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
