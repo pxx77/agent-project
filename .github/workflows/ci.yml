@@ -1,0 +1,129 @@
+name: CI
+
+# Each job below maps to something this repository actually claims: a Python codebase whose tests
+# pass and whose evaluation numbers reproduce from the committed data, a Windows-only DeepSeek
+# credential launcher, and a repository that tracks no secrets. There is nothing decorative here.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python checks (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [citeguard-agent, datapilot-agent]
+    defaults:
+      run:
+        working-directory: ${{ matrix.project }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
+
+      # Both extras are needed: `dev` carries pytest, `mcp` carries the Model Context Protocol SDK
+      # that the protocol-level tests and the MCP server itself import. `--locked` fails the job if
+      # uv.lock no longer matches pyproject.toml, instead of silently resolving something else.
+      - name: Create the environment from the lock file
+        run: uv sync --locked --extra dev --extra mcp
+
+      - name: Run the test suite
+        run: uv run --no-sync pytest -q
+
+      - name: Run the end-to-end smoke check
+        run: uv run --no-sync python scripts/smoke.py
+
+      # evals/report.json is the evidence behind the numbers quoted in the README, so it has to stay
+      # reproducible. The checker re-runs the offline evaluation into a temporary file -- never over
+      # the committed report -- and compares every deterministic field except latency.
+      - name: Verify that the committed evaluation report still reproduces
+        run: uv run --no-sync python ../tools/check_eval_drift.py ${{ matrix.project }}
+
+      # Guards the same invariant from the other side: if any check writes into the repository (for
+      # example by running the evaluation with its default output path), the job fails here rather
+      # than quietly rewriting the committed report.
+      - name: Verify that no tracked file changed
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git status --porcelain
+            echo "::error::The checks modified tracked files; the evaluation report must stay as committed."
+            exit 1
+          fi
+          echo "The working tree is clean."
+
+  launcher:
+    name: DeepSeek launcher (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
+
+      # The launcher assertions check that each agent resolves to its own virtual environment, so
+      # both environments have to exist before the assertions run.
+      - name: Create the CiteGuard environment
+        run: uv sync --locked --extra dev --extra mcp
+        working-directory: citeguard-agent
+
+      - name: Create the DataPilot environment
+        run: uv sync --locked --extra dev --extra mcp
+        working-directory: datapilot-agent
+
+      # Windows PowerShell 5.1 rather than pwsh, because that is the interpreter the .bat entry
+      # points invoke through `powershell -File`, and it is where the DPAPI credential assertions
+      # were verified. tests/test_deepseek_launcher_integration.ps1 is deliberately excluded: it
+      # starts four long-running processes (two APIs and two Streamlit servers), which belongs on a
+      # developer machine rather than in a per-commit job.
+      - name: Run the launcher assertions
+        shell: powershell
+        run: ./tests/test_deepseek_launcher.ps1
+
+  hygiene:
+    name: No committed credentials
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Fail if anything looks like an API key
+        run: |
+          if git grep -n -E 'sk-[A-Za-z0-9]{20,}' -- . ':!*.docx'; then
+            echo "::error::A string that looks like an API key is committed."
+            exit 1
+          fi
+          echo "No key-like strings found."
+
+      - name: Fail if a local .env file is tracked
+        run: |
+          offenders=$(git ls-files | grep -E '(^|/)\.env($|\.local$)' || true)
+          if [ -n "$offenders" ]; then
+            echo "$offenders"
+            echo "::error::Only .env.example files belong in the repository."
+            exit 1
+          fi
+          echo "Only .env.example files are tracked."
