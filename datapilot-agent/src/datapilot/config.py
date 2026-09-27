@@ -14,7 +14,7 @@ def _int(name: str, default: int) -> int:
 
 @dataclass(frozen=True)
 class Settings:
-    mock: bool = True
+    mock: bool = False
     api_key: str | None = None
     base_url: str = "https://api.deepseek.com"
     model: str = "deepseek-chat"
@@ -23,7 +23,7 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
-        raw = os.getenv("DATAPILOT_MOCK", "1").lower()
+        raw = os.getenv("DATAPILOT_MOCK", "0").lower()
         key = os.getenv("DEEPSEEK_API_KEY", "").strip() or None
         return cls(raw in {"1", "true", "yes", "on"}, key, os.getenv("DEEPSEEK_BASE_URL", cls.base_url), os.getenv("DEEPSEEK_MODEL", cls.model), _int("MAX_RETRIES", 2), _int("MAX_ROWS", 1000))
 

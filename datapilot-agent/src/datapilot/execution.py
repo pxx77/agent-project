@@ -12,7 +12,7 @@ def execute_sql(handle: DatasetHandle, sql: str, max_rows: int = 1000) -> QueryR
     started = time.perf_counter()
     decision = validate_sql(sql)
     if not decision.allowed:
-        return QueryResult(error=decision.reason, duration_ms=(time.perf_counter() - started) * 1000)
+        return QueryResult(error=decision.reason, duration_ms=(time.perf_counter() - started) * 1000, policy_blocked=True)
     connection = sqlite3.connect(":memory:")
     try:
         columns = list(handle.rows[0]) if handle.rows else []

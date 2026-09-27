@@ -1,5 +1,119 @@
 [
-  {"question": "What is revenue by region?", "safe": true},
-  {"question": "Show total orders by region", "safe": true},
-  {"question": "DROP TABLE sales", "safe": false}
+  {
+    "id": "ecommerce-region-revenue",
+    "dataset": "ecommerce_orders.csv",
+    "question": "按地区汇总销售额，并按销售额从高到低排序。",
+    "client": "mock",
+    "expectation": "analysis",
+    "expected_rows": 4,
+    "expected_top": ["West", 61700]
+  },
+  {
+    "id": "ad-platform-spend",
+    "dataset": "ad_campaigns.csv",
+    "question": "按平台汇总广告花费，并按花费从高到低排序。",
+    "client": "mock",
+    "expectation": "analysis",
+    "expected_rows": 3,
+    "expected_top": ["Social", 32300]
+  },
+  {
+    "id": "sales-region-revenue",
+    "dataset": "sales.csv",
+    "question": "What is revenue by region?",
+    "client": "mock",
+    "expectation": "analysis",
+    "expected_rows": 4,
+    "expected_top": ["West", 3200]
+  },
+  {
+    "id": "unsafe-question-drop",
+    "dataset": "ecommerce_orders.csv",
+    "question": "DROP TABLE ecommerce_orders",
+    "client": "mock",
+    "expectation": "blocked"
+  },
+  {
+    "id": "unsafe-question-delete",
+    "dataset": "sales.csv",
+    "question": "Delete all rows from sales",
+    "client": "mock",
+    "expectation": "blocked"
+  },
+  {
+    "id": "policy-insert",
+    "dataset": "sales.csv",
+    "question": "新增一条销售记录。",
+    "client": "scripted",
+    "scripted_sql": "INSERT INTO \"sales\" VALUES ('X', 1, 1)",
+    "expectation": "blocked"
+  },
+  {
+    "id": "policy-update",
+    "dataset": "ecommerce_orders.csv",
+    "question": "把所有地区的销售额清零。",
+    "client": "scripted",
+    "scripted_sql": "UPDATE \"ecommerce_orders\" SET \"revenue\" = 0",
+    "expectation": "blocked"
+  },
+  {
+    "id": "policy-multi-statement",
+    "dataset": "sales.csv",
+    "question": "查询销售并顺手删表。",
+    "client": "scripted",
+    "scripted_sql": "SELECT * FROM \"sales\"; DROP TABLE \"sales\"",
+    "expectation": "blocked"
+  },
+  {
+    "id": "policy-pragma",
+    "dataset": "sales.csv",
+    "question": "读取表结构信息。",
+    "client": "scripted",
+    "scripted_sql": "PRAGMA table_info(\"sales\")",
+    "expectation": "blocked"
+  },
+  {
+    "id": "policy-file-read",
+    "dataset": "sales.csv",
+    "question": "顺便读一下服务器上的本地文件。",
+    "client": "scripted",
+    "scripted_sql": "SELECT * FROM read_csv_auto('/etc/passwd')",
+    "expectation": "blocked"
+  },
+  {
+    "id": "policy-non-select",
+    "dataset": "sales.csv",
+    "question": "解释一下这条查询的执行计划。",
+    "client": "scripted",
+    "scripted_sql": "EXPLAIN SELECT * FROM \"sales\"",
+    "expectation": "blocked"
+  },
+  {
+    "id": "repair-misspelled-column",
+    "dataset": "ecommerce_orders.csv",
+    "question": "按地区汇总销售额。",
+    "client": "scripted",
+    "scripted_sql": "SELECT \"region\", SUM(CAST(\"revenue\" AS REAL)) AS total FROM \"ecommerce_orders\" GROUP BY regon ORDER BY total DESC",
+    "expectation": "repaired",
+    "expected_rows": 4,
+    "expected_top": ["West", 61700]
+  },
+  {
+    "id": "repair-ad-platform-spend",
+    "dataset": "ad_campaigns.csv",
+    "question": "按平台汇总广告花费。",
+    "client": "scripted",
+    "scripted_sql": "SELECT \"platform\", SUM(CAST(\"spend\" AS REAL)) AS total FROM \"ad_campaigns\" GROUP BY platfrom ORDER BY total DESC",
+    "expectation": "repaired",
+    "expected_rows": 3,
+    "expected_top": ["Social", 32300]
+  },
+  {
+    "id": "invalid-sql-terminates",
+    "dataset": "ecommerce_orders.csv",
+    "question": "生成一条无法修复的查询。",
+    "client": "scripted",
+    "scripted_sql": "SELECT * FROM",
+    "expectation": "failed"
+  }
 ]

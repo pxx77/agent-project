@@ -32,6 +32,7 @@ class QueryResult(BaseModel):
     row_count: int = 0
     duration_ms: float = 0.0
     error: str | None = None
+    policy_blocked: bool = False
 
 
 class PolicyDecision(BaseModel):
@@ -56,6 +57,8 @@ class Trace(BaseModel):
     retries: int = 0
     duration_ms: float = 0.0
     model_calls: int = 0
+    provider: str = "mock"
+    model: str = "deterministic-fixture"
 
 
 class AgentResult(BaseModel):

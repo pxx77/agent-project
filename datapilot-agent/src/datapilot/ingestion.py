@@ -31,6 +31,8 @@ def load_bytes(name: str, data: bytes, max_rows: int = 1000) -> DatasetHandle:
         connection.close()
     else:
         raise ValueError("Unsupported file type. Use CSV, XLSX, or SQLite.")
+    if not rows:
+        raise ValueError("Uploaded dataset contains no data rows")
     return DatasetHandle(_safe_name(name.rsplit(".", 1)[0]), rows)
 
 

@@ -1,29 +1,95 @@
-from fastapi import FastAPI, UploadFile, File
-from pydantic import BaseModel
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from pydantic import BaseModel, ConfigDict, Field
 
 from .config import Settings
 from .ingestion import load_bytes, load_fixture
+from .models import AgentResult
 from .workflow import run_agent
 
-app = FastAPI(title="DataPilot Agent")
+app = FastAPI(
+    title="DataPilot 数据分析 Agent",
+    version="1.0.0",
+    description="""
+## 使用顺序
+
+1. 打开 **1. 上传数据**，调用 `POST /profile` 上传 CSV、XLSX 或 SQLite。
+2. 打开 **2. 提问**，调用 `POST /ask`，点击 **Try it out** 后填写自然语言问题。
+3. 查看生成的 `sql`、`query_result`、`chart`、`verification` 和 `trace`。
+4. `trace.provider=deepseek` 才表示 SQL 由 DeepSeek 生成；`mock` 表示离线演示模式。
+""",
+    openapi_tags=[
+        {"name": "0. 状态", "description": "确认服务和当前模型模式。"},
+        {"name": "1. 上传数据", "description": "上传数据并设为后续提问的数据源。"},
+        {"name": "2. 提问", "description": "针对最近上传的数据生成并执行安全只读 SQL。"},
+    ],
+)
 _handle = load_fixture()
 
 
 class AskRequest(BaseModel):
-    question: str
+    model_config = ConfigDict(
+        json_schema_extra={"example": {"question": "按地区统计销售额，并按销售额降序排列。"}}
+    )
+
+    question: str = Field(
+        min_length=1,
+        description="针对当前数据集提出的自然语言分析问题。",
+        examples=["按地区统计销售额，并按销售额降序排列。"],
+    )
 
 
-@app.get("/health")
+@app.get("/", include_in_schema=False)
+def usage_guide() -> dict:
+    return {
+        "name": "DataPilot 数据分析 Agent",
+        "swagger": "/docs",
+        "steps": [
+            {"step": 1, "endpoint": "POST /profile", "action": "上传数据并查看字段画像"},
+            {"step": 2, "endpoint": "POST /ask", "action": "在 question 中填写分析问题"},
+            {"step": 3, "endpoint": "GET /health", "action": "确认 provider 是否为 deepseek"},
+        ],
+    }
+
+
+@app.get(
+    "/health",
+    tags=["0. 状态"],
+    summary="查看当前模型模式",
+    description="`provider=deepseek` 且 `mock=false` 才表示提问时会调用 DeepSeek API。",
+)
 def health():
-    return {"status": "ok", "mock": not Settings.from_env().model_enabled}
+    settings = Settings.from_env()
+    return {
+        "status": "ok",
+        "provider": "deepseek" if settings.model_enabled else "mock",
+        "model": settings.model if settings.model_enabled else "deterministic-fixture",
+        "mock": not settings.model_enabled,
+    }
 
 
-@app.post("/profile")
+@app.post(
+    "/profile",
+    tags=["1. 上传数据"],
+    summary="上传数据并生成字段画像",
+    description="选择一个 CSV、XLSX 或 SQLite 文件。上传成功后，该文件会成为 `/ask` 的数据源。",
+)
 async def profile(file: UploadFile = File(...)):
     from .profiling import profile_dataset
-    return profile_dataset(load_bytes(file.filename or "data.csv", await file.read())).model_dump()
+    global _handle
+    try:
+        _handle = load_bytes(file.filename or "data.csv", await file.read())
+    except (ValueError, OSError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return profile_dataset(_handle).model_dump()
 
 
-@app.post("/ask")
+@app.post(
+    "/ask",
+    response_model=AgentResult,
+    tags=["2. 提问"],
+    summary="提交问题并运行 Agent",
+    description="点击 **Try it out**，修改请求体中的 `question`，然后点击 **Execute**。",
+    response_description="包含安全 SQL、查询结果、图表规格、验证结果和模型调用轨迹。",
+)
 def ask(request: AskRequest):
     return run_agent(request.question, _handle).model_dump()
