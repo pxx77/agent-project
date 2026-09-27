@@ -119,6 +119,8 @@ Assert-Equal ((Get-EvalEnvironmentNames) -join '|') 'DEEPSEEK_API_KEY|DEEPSEEK_B
 $missingReportPath = Join-Path ([IO.Path]::GetTempPath()) "agent-project-missing-report-$PID.json"
 $mockReportPath = Join-Path ([IO.Path]::GetTempPath()) "agent-project-mock-report-$PID.json"
 $liveReportPath = Join-Path ([IO.Path]::GetTempPath()) "agent-project-live-report-$PID.json"
+$localizedReportPath = Join-Path ([IO.Path]::GetTempPath()) "agent-project-live-report-cjk-$PID.json"
+$localizedQuestion = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('55Sf5oiQ5LiA5p2h5peg5rOV5L+u5aSN55qE5p+l6K+i'))
 if (Test-Path -LiteralPath $missingReportPath) {
     Remove-Item -LiteralPath $missingReportPath -Force
 }
@@ -128,9 +130,13 @@ try {
     Assert-Throws { Test-EvalReportIsLive -Path $missingReportPath -ProjectName 'CiteGuard' } 'Eval mode rejects a missing report'
     Assert-Throws { Test-EvalReportIsLive -Path $mockReportPath -ProjectName 'CiteGuard' } 'Eval mode rejects a report that is not live'
     Assert-True (Test-EvalReportIsLive -Path $liveReportPath -ProjectName 'CiteGuard') 'Eval mode accepts a live report'
+
+    $localizedReport = '{"mode":"live","provider":"deepseek","cases":[{"question":"' + $localizedQuestion + '"}]}'
+    [IO.File]::WriteAllText($localizedReportPath, $localizedReport, [Text.UTF8Encoding]::new($false))
+    Assert-True (Test-EvalReportIsLive -Path $localizedReportPath -ProjectName 'CiteGuard') 'Eval mode reads a Chinese UTF-8 report without a BOM'
 }
 finally {
-    foreach ($temporaryReport in @($mockReportPath, $liveReportPath)) {
+    foreach ($temporaryReport in @($mockReportPath, $liveReportPath, $localizedReportPath)) {
         if (Test-Path -LiteralPath $temporaryReport) {
             Remove-Item -LiteralPath $temporaryReport -Force
         }

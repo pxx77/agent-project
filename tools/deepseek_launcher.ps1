@@ -688,7 +688,8 @@ function Test-EvalReportIsLive {
     }
 
     try {
-        $report = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+        $reportText = [IO.File]::ReadAllText($Path, [Text.Encoding]::UTF8)
+        $report = $reportText | ConvertFrom-Json
     }
     catch {
         throw "$ProjectName wrote an unreadable evaluation report at $Path."
