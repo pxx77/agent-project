@@ -1,5 +1,7 @@
 # CiteGuard Agent Implementation Plan
 
+> 实现现状（2026-09-27 更新）：本文件是当天的初始计划，最终交付与其有一处差异——检索是自行实现的 Okapi BM25（含 IDF、TF 饱和与长度归一化）而不是 rank-bm25 依赖，并额外加了一道相关性下限。当前能力与真实评测数字以 `citeguard-agent/README.md` 为准。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a one-day, locally runnable document research Agent that answers with resolvable citations and a verifier score.
