@@ -7,18 +7,18 @@ start from the bundled fixture corpus.
 
 from __future__ import annotations
 
-from .retrieval import BM25Index
+from .retrieval import Retriever
 from .workflow import build_fixture_agent
 
-_index: BM25Index = build_fixture_agent().index
+_index: Retriever = build_fixture_agent().index
 
 
-def get_index() -> BM25Index:
+def get_index() -> Retriever:
     """Return the index every transport in this process reads from."""
     return _index
 
 
-def set_index(index: BM25Index) -> None:
+def set_index(index: Retriever) -> None:
     """Replace the active index, for example after a document upload."""
     global _index
     _index = index

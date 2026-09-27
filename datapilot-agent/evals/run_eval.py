@@ -20,7 +20,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from datapilot.config import Settings
-from datapilot.llm import MockClient, build_model_client
+from datapilot.llm import MockClient, build_model_client, record_estimate
+from datapilot.models import TokenUsage
+from datapilot.usage import PRICE_CURRENCY, PRICE_SOURCE, PRICE_UNIT, PRICE_VERIFIED_ON, UsageLedger
 from datapilot.workflow import build_fixture_agent
 
 EVALS = Path(__file__).resolve().parent
@@ -31,6 +33,10 @@ class ScriptedClient:
 
     The repair probe depends on the actual ``sql_repair`` behaviour, so the repair branch is
     delegated to :class:`MockClient` instead of being reimplemented here.
+
+    It keeps its own usage ledger so the scripted cases carry token and cost figures like the mock
+    ones: the pipeline still builds a real prompt of a measurable size, even though the SQL that
+    comes back is fixed. Leaving those cases at zero would make the report's total an undercount.
     """
 
     provider = "scripted"
@@ -38,12 +44,20 @@ class ScriptedClient:
 
     def __init__(self, sql: str):
         self.sql = sql
+        self._ledger = UsageLedger()
         self._repair = MockClient()
+
+    def consume_usage(self) -> TokenUsage:
+        """Hand out the usage booked since the last call and reset, so callers can attribute it."""
+        return self._ledger.drain()
 
     def complete_json(self, system: str, user: str, schema_name: str) -> dict:
         if schema_name == "sql_repair":
-            return self._repair.complete_json(system, user, schema_name)
-        return {"sql": self.sql}
+            payload = self._repair.complete_json(system, user, schema_name)
+        else:
+            payload = {"sql": self.sql}
+        record_estimate(self._ledger, system, user, payload)
+        return payload
 
 
 def _percentile(values: list[float], fraction: float) -> float:
@@ -121,6 +135,12 @@ def _run_case(case: dict, agents: dict, default_client) -> dict:
         "retries": result.trace.retries,
         "model_calls": result.trace.model_calls,
         "latency_ms": round(result.trace.duration_ms, 3),
+        "prompt_tokens": result.trace.usage.prompt_tokens,
+        "completion_tokens": result.trace.usage.completion_tokens,
+        "total_tokens": result.trace.usage.total_tokens,
+        "usage_measured": result.trace.usage.measured,
+        "billing_model": result.trace.billing_model,
+        "cost_cny": result.trace.cost_cny,
         "correct": _judge(case, result),
     }
 
@@ -151,6 +171,7 @@ def main() -> int:
         for kind in ("analysis", "blocked", "repaired", "failed")
     }
     latencies = [row["latency_ms"] for row in rows]
+    costs = [row["cost_cny"] or 0.0 for row in rows]
 
     metrics = {
         "case_accuracy": _rate(sum(row["correct"] for row in rows), len(rows)),
@@ -174,6 +195,34 @@ def main() -> int:
         "mean_latency_ms": round(sum(latencies) / len(latencies), 3),
         "p95_latency_ms": round(_percentile(latencies, 0.95), 3),
         "model_calls_total": sum(row["model_calls"] for row in rows),
+        "prompt_tokens_total": sum(row["prompt_tokens"] for row in rows),
+        "completion_tokens_total": sum(row["completion_tokens"] for row in rows),
+        "tokens_total": sum(row["total_tokens"] for row in rows),
+        "cost_cny_total": round(sum(costs), 6),
+        "cost_cny_per_case": round(sum(costs) / len(rows), 6),
+        # Conjunctive: one estimated case is enough to mark the whole run as estimated.
+        "usage_measured": all(row["usage_measured"] for row in rows),
+    }
+
+    measured = metrics["usage_measured"]
+    usage = {
+        "measured": measured,
+        "prompt_tokens": metrics["prompt_tokens_total"],
+        "completion_tokens": metrics["completion_tokens_total"],
+        "total_tokens": metrics["tokens_total"],
+        "cost_cny": metrics["cost_cny_total"],
+        "cost_cny_per_case": metrics["cost_cny_per_case"],
+        "pricing_model": rows[0]["billing_model"] if rows else "",
+        "currency": PRICE_CURRENCY,
+        "unit": PRICE_UNIT,
+        "price_source": PRICE_SOURCE,
+        "price_verified_on": PRICE_VERIFIED_ON,
+        "note": (
+            "离线回放不产生真实计费：token 数按官方字符换算比例在本机估算（measured=false），"
+            "费用按 pricing_model 的官方单价折算，只能作为量级参考。"
+            if not measured
+            else "线上运行，token 数取自 DeepSeek 响应体的 usage 字段，费用按官方单价换算。"
+        ),
     }
 
     report = {
@@ -189,12 +238,14 @@ def main() -> int:
             "而不是模型生成 SQL 的质量；--live 时 mock 类样例改由 DeepSeek 生成 SQL。"
         ),
         "metrics": metrics,
+        "usage": usage,
         "cases": rows,
     }
 
     output = Path(args.output) if args.output else EVALS / "report.json"
     output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({k: report[k] for k in ("mode", "provider", "model", "datasets", "case_count", "metrics")}, ensure_ascii=False, indent=2))
+    print(f"\nusage: {json.dumps(usage, ensure_ascii=False)}")
     failed = [row["id"] for row in rows if not row["correct"]]
     print(f"\n未通过样例: {failed or '无'}")
     print(f"\nreport -> {output}")

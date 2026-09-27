@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T07:08:19+00:00",
+  "generated_at": "2026-09-27T17:06:30+00:00",
   "provider": "mock",
   "model": "deterministic-fixture",
   "mode": "mock",
@@ -10,6 +10,12 @@
   ],
   "chunk_count": 5,
   "case_count": 24,
+  "retrieval": {
+    "retriever": "bm25",
+    "embedding_provider": "hashing",
+    "ablation_report": "evals/retrieval_ablation.json",
+    "note": "本报告用 CITEGUARD_RETRIEVER=auto 解析出的检索器（离线哈希编码器下即 BM25）。词面与融合两种策略的端到端对比、以及「稠密通道单独使用会失去拒答能力」的实测，都记在 ablation_report 指向的文件里；这里不重复数字，免得两份报告各说各话。"
+  },
   "metrics": {
     "case_accuracy": 1.0,
     "answerable_grounded_rate": 1.0,
@@ -20,9 +26,29 @@
     "answerable_case_count": 21,
     "insufficient_case_count": 3,
     "unsupported_claims_total": 0,
-    "mean_latency_ms": 0.471,
-    "p95_latency_ms": 0.956,
-    "model_calls_total": 42
+    "mean_latency_ms": 0.654,
+    "p95_latency_ms": 0.973,
+    "model_calls_total": 42,
+    "prompt_tokens_total": 41446,
+    "completion_tokens_total": 15017,
+    "tokens_total": 56463,
+    "cost_cny_total": 0.07148,
+    "cost_cny_per_case": 0.002978,
+    "usage_measured": false
+  },
+  "usage": {
+    "measured": false,
+    "prompt_tokens": 41446,
+    "completion_tokens": 15017,
+    "total_tokens": 56463,
+    "cost_cny": 0.07148,
+    "cost_cny_per_case": 0.002978,
+    "pricing_model": "deepseek-chat",
+    "currency": "CNY",
+    "unit": "per_million_tokens",
+    "price_source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
+    "price_verified_on": "2026-09-28",
+    "note": "离线回放不产生真实计费：token 数按官方字符换算比例在本机估算（measured=false），费用按 pricing_model 的官方单价折算，只能作为量级参考。"
   },
   "cases": [
     {
@@ -49,7 +75,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 3,
-      "latency_ms": 0.983,
+      "latency_ms": 1.265,
+      "prompt_tokens": 2311,
+      "completion_tokens": 781,
+      "total_tokens": 3092,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.003873,
       "correct": true
     },
     {
@@ -77,7 +109,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 2,
-      "latency_ms": 0.53,
+      "latency_ms": 0.945,
+      "prompt_tokens": 2053,
+      "completion_tokens": 781,
+      "total_tokens": 2834,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.003615,
       "correct": true
     },
     {
@@ -104,7 +142,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 3,
-      "latency_ms": 0.424,
+      "latency_ms": 0.89,
+      "prompt_tokens": 2312,
+      "completion_tokens": 781,
+      "total_tokens": 3093,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.003874,
       "correct": true
     },
     {
@@ -132,7 +176,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 2,
-      "latency_ms": 0.434,
+      "latency_ms": 0.89,
+      "prompt_tokens": 2052,
+      "completion_tokens": 781,
+      "total_tokens": 2833,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.003614,
       "correct": true
     },
     {
@@ -160,7 +210,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 2,
-      "latency_ms": 0.41,
+      "latency_ms": 0.714,
+      "prompt_tokens": 2052,
+      "completion_tokens": 781,
+      "total_tokens": 2833,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.003614,
       "correct": true
     },
     {
@@ -187,7 +243,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 2,
-      "latency_ms": 0.362,
+      "latency_ms": 0.578,
+      "prompt_tokens": 1624,
+      "completion_tokens": 790,
+      "total_tokens": 2414,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.003204,
       "correct": true
     },
     {
@@ -215,7 +277,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 2,
-      "latency_ms": 0.454,
+      "latency_ms": 0.745,
+      "prompt_tokens": 2056,
+      "completion_tokens": 790,
+      "total_tokens": 2846,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.003636,
       "correct": true
     },
     {
@@ -243,7 +311,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 3,
-      "latency_ms": 0.433,
+      "latency_ms": 0.973,
+      "prompt_tokens": 2379,
+      "completion_tokens": 790,
+      "total_tokens": 3169,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.003959,
       "correct": true
     },
     {
@@ -270,7 +344,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 3,
-      "latency_ms": 0.373,
+      "latency_ms": 0.82,
+      "prompt_tokens": 1948,
+      "completion_tokens": 790,
+      "total_tokens": 2738,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.003528,
       "correct": true
     },
     {
@@ -299,7 +379,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 3,
-      "latency_ms": 0.956,
+      "latency_ms": 0.936,
+      "prompt_tokens": 2226,
+      "completion_tokens": 790,
+      "total_tokens": 3016,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.003806,
       "correct": true
     },
     {
@@ -328,7 +414,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 3,
-      "latency_ms": 0.687,
+      "latency_ms": 0.818,
+      "prompt_tokens": 2382,
+      "completion_tokens": 790,
+      "total_tokens": 3172,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.003962,
       "correct": true
     },
     {
@@ -355,7 +447,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 2,
-      "latency_ms": 0.459,
+      "latency_ms": 0.793,
+      "prompt_tokens": 1927,
+      "completion_tokens": 781,
+      "total_tokens": 2708,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.003489,
       "correct": true
     },
     {
@@ -382,7 +480,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 2,
-      "latency_ms": 0.623,
+      "latency_ms": 0.676,
+      "prompt_tokens": 1869,
+      "completion_tokens": 663,
+      "total_tokens": 2532,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.003195,
       "correct": true
     },
     {
@@ -409,7 +513,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 2,
-      "latency_ms": 0.442,
+      "latency_ms": 0.699,
+      "prompt_tokens": 1873,
+      "completion_tokens": 663,
+      "total_tokens": 2536,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.003199,
       "correct": true
     },
     {
@@ -434,7 +544,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 1,
-      "latency_ms": 0.279,
+      "latency_ms": 0.446,
+      "prompt_tokens": 1104,
+      "completion_tokens": 663,
+      "total_tokens": 1767,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.00243,
       "correct": true
     },
     {
@@ -462,7 +578,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 3,
-      "latency_ms": 0.408,
+      "latency_ms": 0.612,
+      "prompt_tokens": 2044,
+      "completion_tokens": 663,
+      "total_tokens": 2707,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.00337,
       "correct": true
     },
     {
@@ -489,7 +611,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 2,
-      "latency_ms": 0.428,
+      "latency_ms": 0.596,
+      "prompt_tokens": 1872,
+      "completion_tokens": 663,
+      "total_tokens": 2535,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.003198,
       "correct": true
     },
     {
@@ -517,7 +645,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 2,
-      "latency_ms": 0.75,
+      "latency_ms": 0.672,
+      "prompt_tokens": 2063,
+      "completion_tokens": 790,
+      "total_tokens": 2853,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.003643,
       "correct": true
     },
     {
@@ -544,7 +678,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 2,
-      "latency_ms": 0.587,
+      "latency_ms": 0.442,
+      "prompt_tokens": 1407,
+      "completion_tokens": 348,
+      "total_tokens": 1755,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.002103,
       "correct": true
     },
     {
@@ -571,7 +711,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 3,
-      "latency_ms": 0.494,
+      "latency_ms": 0.468,
+      "prompt_tokens": 1785,
+      "completion_tokens": 348,
+      "total_tokens": 2133,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.002481,
       "correct": true
     },
     {
@@ -600,7 +746,13 @@
       "unsupported_claims": 0,
       "model_calls": 2,
       "retrieved_chunks": 3,
-      "latency_ms": 0.682,
+      "latency_ms": 0.645,
+      "prompt_tokens": 2107,
+      "completion_tokens": 790,
+      "total_tokens": 2897,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.003687,
       "correct": true
     },
     {
@@ -617,7 +769,13 @@
       "unsupported_claims": 0,
       "model_calls": 0,
       "retrieved_chunks": 0,
-      "latency_ms": 0.043,
+      "latency_ms": 0.023,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "usage_measured": true,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.0,
       "correct": true
     },
     {
@@ -634,7 +792,13 @@
       "unsupported_claims": 0,
       "model_calls": 0,
       "retrieved_chunks": 0,
-      "latency_ms": 0.029,
+      "latency_ms": 0.019,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "usage_measured": true,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.0,
       "correct": true
     },
     {
@@ -651,7 +815,13 @@
       "unsupported_claims": 0,
       "model_calls": 0,
       "retrieved_chunks": 0,
-      "latency_ms": 0.035,
+      "latency_ms": 0.02,
+      "prompt_tokens": 0,
+      "completion_tokens": 0,
+      "total_tokens": 0,
+      "usage_measured": true,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.0,
       "correct": true
     }
   ],

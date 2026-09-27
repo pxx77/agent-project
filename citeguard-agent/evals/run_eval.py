@@ -15,7 +15,9 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from citeguard.config import Settings
 from citeguard.llm import MockClient, build_model_client
+from citeguard.usage import PRICE_CURRENCY, PRICE_SOURCE, PRICE_UNIT, PRICE_VERIFIED_ON
 from citeguard.workflow import run_agent
 
 EVALS = Path(__file__).resolve().parent
@@ -66,8 +68,66 @@ def _run_case(case: dict, agent, client) -> dict:
         "model_calls": result.trace.model_calls,
         "retrieved_chunks": len(result.trace.retrieved_chunk_ids),
         "latency_ms": round(result.trace.duration_ms, 3),
+        "prompt_tokens": result.trace.usage.prompt_tokens,
+        "completion_tokens": result.trace.usage.completion_tokens,
+        "total_tokens": result.trace.usage.total_tokens,
+        "usage_measured": result.trace.usage.measured,
+        "billing_model": result.trace.billing_model,
+        "cost_cny": result.trace.cost_cny,
         "correct": correct,
     }
+
+
+def _metrics(rows: list[dict]) -> dict:
+    """Derive the report metrics from per-case rows.
+
+    Kept separate from ``main`` so every script that scores CiteGuard cases — including
+    ``evals/run_retrieval_ablation.py`` — uses one definition of each metric. Two copies of
+    this block would drift, and a drifted copy is how a comparison quietly stops being
+    comparable.
+    """
+    answerable = [row for row in rows if row["expectation"] == "answerable"]
+    insufficient_cases = [row for row in rows if row["expectation"] == "insufficient"]
+    cross_document = [row for row in answerable if len(row["expected_sources"]) > 1]
+    all_citations = sum(len(row["citations"]) for row in rows)
+    resolved_citations = sum(len(row["resolved_citations"]) for row in rows)
+    latencies = [row["latency_ms"] for row in rows]
+    costs = [row["cost_cny"] or 0.0 for row in rows]
+    return {
+        "case_accuracy": round(sum(row["correct"] for row in rows) / len(rows), 4),
+        "answerable_grounded_rate": round(
+            sum(bool(row["citations"]) for row in answerable) / len(answerable), 4
+        ) if answerable else 0.0,
+        "insufficient_evidence_rate": round(
+            sum(row["status"] == "insufficient_evidence" for row in insufficient_cases)
+            / len(insufficient_cases), 4
+        ) if insufficient_cases else 0.0,
+        "cross_document_coverage": round(
+            sum(set(row["expected_sources"]) <= set(row["sources"]) for row in cross_document)
+            / len(cross_document), 4
+        ) if cross_document else 0.0,
+        "citation_resolvability": round(resolved_citations / all_citations, 4) if all_citations else 0.0,
+        "mean_support_rate": round(sum(row["support_rate"] for row in rows) / len(rows), 4),
+        "answerable_case_count": len(answerable),
+        "insufficient_case_count": len(insufficient_cases),
+        "unsupported_claims_total": sum(row["unsupported_claims"] for row in rows),
+        "mean_latency_ms": round(sum(latencies) / len(latencies), 3),
+        "p95_latency_ms": round(_percentile(latencies, 0.95), 3),
+        "model_calls_total": sum(row["model_calls"] for row in rows),
+        "prompt_tokens_total": sum(row["prompt_tokens"] for row in rows),
+        "completion_tokens_total": sum(row["completion_tokens"] for row in rows),
+        "tokens_total": sum(row["total_tokens"] for row in rows),
+        "cost_cny_total": round(sum(costs), 6),
+        "cost_cny_per_case": round(sum(costs) / len(rows), 6),
+        # Conjunctive: one estimated case is enough to mark the whole run as estimated.
+        "usage_measured": all(row["usage_measured"] for row in rows),
+    }
+
+
+def evaluate(cases: list[dict], agent, client) -> tuple[list[dict], dict]:
+    """Run every case through ``agent`` and score it, returning the rows and the metrics."""
+    rows = [_run_case(case, agent, client) for case in cases]
+    return rows, _metrics(rows)
 
 
 def _verification_probe(index) -> dict:
@@ -140,36 +200,27 @@ def main() -> int:
         client = MockClient()
 
     cases = json.loads((EVALS / "cases.json").read_text(encoding="utf-8"))
-    rows = [_run_case(case, agent, client) for case in cases]
+    rows, metrics = evaluate(cases, agent, client)
 
-    answerable = [row for row in rows if row["expectation"] == "answerable"]
-    insufficient_cases = [row for row in rows if row["expectation"] == "insufficient"]
-    cross_document = [row for row in answerable if len(row["expected_sources"]) > 1]
-    all_citations = sum(len(row["citations"]) for row in rows)
-    resolved_citations = sum(len(row["resolved_citations"]) for row in rows)
-    latencies = [row["latency_ms"] for row in rows]
-
-    metrics = {
-        "case_accuracy": round(sum(row["correct"] for row in rows) / len(rows), 4),
-        "answerable_grounded_rate": round(
-            sum(bool(row["citations"]) for row in answerable) / len(answerable), 4
-        ) if answerable else 0.0,
-        "insufficient_evidence_rate": round(
-            sum(row["status"] == "insufficient_evidence" for row in insufficient_cases)
-            / len(insufficient_cases), 4
-        ) if insufficient_cases else 0.0,
-        "cross_document_coverage": round(
-            sum(set(row["expected_sources"]) <= set(row["sources"]) for row in cross_document)
-            / len(cross_document), 4
-        ) if cross_document else 0.0,
-        "citation_resolvability": round(resolved_citations / all_citations, 4) if all_citations else 0.0,
-        "mean_support_rate": round(sum(row["support_rate"] for row in rows) / len(rows), 4),
-        "answerable_case_count": len(answerable),
-        "insufficient_case_count": len(insufficient_cases),
-        "unsupported_claims_total": sum(row["unsupported_claims"] for row in rows),
-        "mean_latency_ms": round(sum(latencies) / len(latencies), 3),
-        "p95_latency_ms": round(_percentile(latencies, 0.95), 3),
-        "model_calls_total": sum(row["model_calls"] for row in rows),
+    measured = metrics["usage_measured"]
+    usage = {
+        "measured": measured,
+        "prompt_tokens": metrics["prompt_tokens_total"],
+        "completion_tokens": metrics["completion_tokens_total"],
+        "total_tokens": metrics["tokens_total"],
+        "cost_cny": metrics["cost_cny_total"],
+        "cost_cny_per_case": metrics["cost_cny_per_case"],
+        "pricing_model": rows[0]["billing_model"] if rows else "",
+        "currency": PRICE_CURRENCY,
+        "unit": PRICE_UNIT,
+        "price_source": PRICE_SOURCE,
+        "price_verified_on": PRICE_VERIFIED_ON,
+        "note": (
+            "离线回放不产生真实计费：token 数按官方字符换算比例在本机估算（measured=false），"
+            "费用按 pricing_model 的官方单价折算，只能作为量级参考。"
+            if not measured
+            else "线上运行，token 数取自 DeepSeek 响应体的 usage 字段，费用按官方单价换算。"
+        ),
     }
 
     report = {
@@ -180,7 +231,20 @@ def main() -> int:
         **corpus,
         "chunk_count": len(agent.index.chunks),
         "case_count": len(rows),
+        "retrieval": {
+            "retriever": agent.index.name,
+            "embedding_provider": Settings.from_env().embedding_provider,
+            # Pointer rather than a copied number: the ablation owns those figures, and a
+            # second copy here is how two reports start disagreeing.
+            "ablation_report": "evals/retrieval_ablation.json",
+            "note": (
+                "本报告用 CITEGUARD_RETRIEVER=auto 解析出的检索器（离线哈希编码器下即 BM25）。"
+                "词面与融合两种策略的端到端对比、以及「稠密通道单独使用会失去拒答能力」的实测，"
+                "都记在 ablation_report 指向的文件里；这里不重复数字，免得两份报告各说各话。"
+            ),
+        },
         "metrics": metrics,
+        "usage": usage,
         "cases": rows,
         "verification_probe": _verification_probe(agent.index),
     }
@@ -188,6 +252,8 @@ def main() -> int:
     output = Path(args.output) if args.output else EVALS / "report.json"
     output.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({k: report[k] for k in ("mode", "provider", "model", "case_count", "metrics")}, ensure_ascii=False, indent=2))
+    print(f"\nretrieval: {json.dumps(report['retrieval'], ensure_ascii=False)}")
+    print(f"\nusage: {json.dumps(usage, ensure_ascii=False)}")
     print(f"\nverification_probe: {json.dumps(report['verification_probe'], ensure_ascii=False)}")
     print(f"\nreport -> {output}")
     return 0

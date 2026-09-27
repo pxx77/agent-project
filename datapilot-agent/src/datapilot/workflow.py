@@ -6,9 +6,10 @@ import time
 
 from .config import Settings
 from .execution import execute_sql
-from .llm import build_model_client
-from .models import AgentResult, ChartSpec, DatasetHandle, Profile, QueryResult, TableProfile, Trace, Verification
+from .llm import ModelClient, build_model_client
+from .models import AgentResult, ChartSpec, DatasetHandle, Profile, QueryResult, TableProfile, TokenUsage, Trace, Verification
 from .profiling import profile_dataset
+from .usage import cost_of, drain_usage
 
 _TEMPORAL = re.compile(r"date|month|year|day|time|quarter|week", re.I)
 _TEMPORAL_VALUE = re.compile(r"^\d{4}[-/]\d{1,2}")
@@ -98,6 +99,28 @@ def _conclusion(result: QueryResult, chart: ChartSpec | None) -> str:
     return f"{summary} The largest {chart.y} is {best[-1]} for {best[0]}."
 
 
+def _record_usage(trace: Trace, client: ModelClient | None, settings: Settings) -> None:
+    """Attach the tokens this run consumed, and what they cost.
+
+    The drain is per run rather than per client lifetime, because the evaluation reuses one client
+    across every case: a lifetime counter would report the whole run's tokens on the first case and
+    double-count from there. A repair retry makes two calls in one run, and both land here.
+
+    Offline replay clients have no real model of their own, so their tokens are priced at the
+    configured model: the figure answers "what would these tokens have cost" instead of inventing a
+    rate for a client that was never billed. Nothing was billed, which is exactly why
+    ``usage.measured`` stays False.
+    """
+    if client is None:
+        return
+    usage: TokenUsage = drain_usage(client)
+    billing_model = client.model if client.provider == "deepseek" else settings.model
+    amount = cost_of(usage, billing_model)
+    trace.usage = usage
+    trace.billing_model = billing_model
+    trace.cost_cny = round(amount, 8) if amount is not None else None
+
+
 def run_agent(question: str, handle: DatasetHandle, client=None) -> AgentResult:
     started = time.perf_counter()
     settings = Settings.from_env()
@@ -141,6 +164,7 @@ def run_agent(question: str, handle: DatasetHandle, client=None) -> AgentResult:
     consistent = result.error is None and bool(result.columns)
     trace.status = "success" if consistent else "failed"
     trace.duration_ms = (time.perf_counter() - started) * 1000
+    _record_usage(trace, client, settings)
     return AgentResult(
         sql=sql,
         query_result=result,

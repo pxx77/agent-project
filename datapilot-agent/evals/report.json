@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-27T07:08:26+00:00",
+  "generated_at": "2026-09-27T17:00:56+00:00",
   "provider": "mock",
   "model": "deterministic-fixture",
   "mode": "mock",
@@ -17,9 +17,29 @@
     "unsafe_block_rate": 1.0,
     "repair_success_rate": 1.0,
     "bounded_failure_rate": 1.0,
-    "mean_latency_ms": 0.416,
-    "p95_latency_ms": 1.175,
-    "model_calls_total": 17
+    "mean_latency_ms": 0.315,
+    "p95_latency_ms": 0.916,
+    "model_calls_total": 17,
+    "prompt_tokens_total": 4019,
+    "completion_tokens_total": 423,
+    "tokens_total": 4442,
+    "cost_cny_total": 0.004865,
+    "cost_cny_per_case": 0.000348,
+    "usage_measured": false
+  },
+  "usage": {
+    "measured": false,
+    "prompt_tokens": 4019,
+    "completion_tokens": 423,
+    "total_tokens": 4442,
+    "cost_cny": 0.004865,
+    "cost_cny_per_case": 0.000348,
+    "pricing_model": "deepseek-chat",
+    "currency": "CNY",
+    "unit": "per_million_tokens",
+    "price_source": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing",
+    "price_verified_on": "2026-09-28",
+    "note": "离线回放不产生真实计费：token 数按官方字符换算比例在本机估算（measured=false），费用按 pricing_model 的官方单价折算，只能作为量级参考。"
   },
   "cases": [
     {
@@ -49,7 +69,13 @@
       "status": "success",
       "retries": 0,
       "model_calls": 1,
-      "latency_ms": 1.339,
+      "latency_ms": 0.916,
+      "prompt_tokens": 285,
+      "completion_tokens": 46,
+      "total_tokens": 331,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.000377,
       "correct": true
     },
     {
@@ -79,7 +105,13 @@
       "status": "success",
       "retries": 0,
       "model_calls": 1,
-      "latency_ms": 0.845,
+      "latency_ms": 0.342,
+      "prompt_tokens": 297,
+      "completion_tokens": 44,
+      "total_tokens": 341,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.000385,
       "correct": true
     },
     {
@@ -109,7 +141,13 @@
       "status": "success",
       "retries": 0,
       "model_calls": 1,
-      "latency_ms": 0.479,
+      "latency_ms": 0.223,
+      "prompt_tokens": 129,
+      "completion_tokens": 42,
+      "total_tokens": 171,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.000213,
       "correct": true
     },
     {
@@ -129,7 +167,13 @@
       "status": "failed",
       "retries": 0,
       "model_calls": 1,
-      "latency_ms": 0.161,
+      "latency_ms": 0.108,
+      "prompt_tokens": 281,
+      "completion_tokens": 12,
+      "total_tokens": 293,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.000305,
       "correct": true
     },
     {
@@ -149,7 +193,13 @@
       "status": "failed",
       "retries": 0,
       "model_calls": 1,
-      "latency_ms": 0.059,
+      "latency_ms": 0.052,
+      "prompt_tokens": 129,
+      "completion_tokens": 12,
+      "total_tokens": 141,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.000153,
       "correct": true
     },
     {
@@ -169,7 +219,13 @@
       "status": "failed",
       "retries": 0,
       "model_calls": 1,
-      "latency_ms": 0.045,
+      "latency_ms": 0.05,
+      "prompt_tokens": 126,
+      "completion_tokens": 16,
+      "total_tokens": 142,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.000158,
       "correct": true
     },
     {
@@ -189,7 +245,13 @@
       "status": "failed",
       "retries": 0,
       "model_calls": 1,
-      "latency_ms": 0.086,
+      "latency_ms": 0.08,
+      "prompt_tokens": 280,
+      "completion_tokens": 18,
+      "total_tokens": 298,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.000316,
       "correct": true
     },
     {
@@ -209,7 +271,13 @@
       "status": "failed",
       "retries": 0,
       "model_calls": 1,
-      "latency_ms": 0.043,
+      "latency_ms": 0.045,
+      "prompt_tokens": 127,
+      "completion_tokens": 17,
+      "total_tokens": 144,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.000161,
       "correct": true
     },
     {
@@ -229,7 +297,13 @@
       "status": "failed",
       "retries": 0,
       "model_calls": 1,
-      "latency_ms": 0.039,
+      "latency_ms": 0.04,
+      "prompt_tokens": 126,
+      "completion_tokens": 12,
+      "total_tokens": 138,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.00015,
       "correct": true
     },
     {
@@ -249,7 +323,13 @@
       "status": "failed",
       "retries": 0,
       "model_calls": 1,
-      "latency_ms": 0.041,
+      "latency_ms": 0.04,
+      "prompt_tokens": 130,
+      "completion_tokens": 16,
+      "total_tokens": 146,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.000162,
       "correct": true
     },
     {
@@ -269,7 +349,13 @@
       "status": "failed",
       "retries": 0,
       "model_calls": 1,
-      "latency_ms": 0.044,
+      "latency_ms": 0.04,
+      "prompt_tokens": 129,
+      "completion_tokens": 13,
+      "total_tokens": 142,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.000155,
       "correct": true
     },
     {
@@ -299,7 +385,13 @@
       "status": "success",
       "retries": 1,
       "model_calls": 2,
-      "latency_ms": 0.761,
+      "latency_ms": 0.694,
+      "prompt_tokens": 661,
+      "completion_tokens": 80,
+      "total_tokens": 741,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.000821,
       "correct": true
     },
     {
@@ -329,7 +421,13 @@
       "status": "success",
       "retries": 1,
       "model_calls": 2,
-      "latency_ms": 1.175,
+      "latency_ms": 1.4,
+      "prompt_tokens": 686,
+      "completion_tokens": 79,
+      "total_tokens": 765,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.000844,
       "correct": true
     },
     {
@@ -349,7 +447,13 @@
       "status": "failed",
       "retries": 1,
       "model_calls": 2,
-      "latency_ms": 0.704,
+      "latency_ms": 0.379,
+      "prompt_tokens": 633,
+      "completion_tokens": 16,
+      "total_tokens": 649,
+      "usage_measured": false,
+      "billing_model": "deepseek-chat",
+      "cost_cny": 0.000665,
       "correct": true
     }
   ]

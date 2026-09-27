@@ -49,10 +49,18 @@ if st.button("运行 DataPilot Agent", disabled=not question.strip(), type="prim
     try:
         with st.spinner("正在生成、检查并执行只读 SQL..."):
             result = run_agent(question, handle)
-        col1, col2, col3 = st.columns(3)
+        usage = result.trace.usage
+        cost = result.trace.cost_cny
+        col1, col2, col3, col4 = st.columns(4)
         col1.metric("执行状态", "成功" if result.query_result.error is None else "失败")
         col2.metric("返回行数", result.query_result.row_count)
         col3.metric("SQL 来源", result.trace.provider)
+        col4.metric("本次费用", f"¥{cost:.4f}" if cost is not None else "未计价")
+        st.caption(
+            f"本次用量 {usage.total_tokens} tokens（输入 {usage.prompt_tokens} / 输出 {usage.completion_tokens}）"
+            f"｜{'实测' if usage.measured else '估算'}"
+            f"｜计价模型 {result.trace.billing_model or '未计价'}"
+        )
         st.subheader("生成的 SQL")
         st.code(result.sql, language="sql")
         if result.query_result.error:

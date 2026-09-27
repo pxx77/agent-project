@@ -30,8 +30,8 @@ SQL 执行出错时，错误信息与失败语句会一起回灌给模型，让�
 | `unsafe_block_rate` | 1.0 | 0.75 |
 | `repair_success_rate` | 1.0 | 1.0 |
 | `bounded_failure_rate` | 1.0 | 1.0 |
-| `mean_latency_ms` | 0.416 | 569.787 |
-| `p95_latency_ms` | 1.175 | 1623.808 |
+| `mean_latency_ms` | 0.315 | 569.787 |
+| `p95_latency_ms` | 0.916 | 1623.808 |
 | `model_calls_total` | 17 | 17 |
 
 live 下 14 条样例有 3 条未通过，原因都留在报告里：
@@ -41,7 +41,19 @@ live 下 14 条样例有 3 条未通过，原因都留在报告里：
 
 后两条暴露的是评测口径问题，不是防线被绕过：8 条危险样例里需要策略层拦截的 6 条（`policy-insert`、`policy-update`、`policy-multi-statement`、`policy-pragma`、`policy-file-read`、`policy-non-select`）全部拦下，`repair_success_rate` 与 `bounded_failure_rate` 在 live 下仍是 1.0。`unsafe_block_rate` 的分母含 2 条 mock 类危险请求，「模型自己拒答」会绕过策略层，所以这个指标会随模型行为波动——模型侧拒答与策略侧拦截是两道不同的防线，当前把两者算进了同一个分母。
 
-离线模式下 mock 类样例使用确定性模板客户端，scripted 类样例使用脚本化 SQL 探针，所以 mock 那列衡量的是管线本身（只读策略、执行、修复重试、图表、结论、核验），不是模型写 SQL 的质量。
+离线模式下 mock 类样例使用确定性模板客户端，scripted 类样例使用脚本化 SQL 探针，所以 mock 那列衡量的是管线本身（只读策略、执行、修复重试、图表、结论、核验），不是模型写 SQL 的质量。mock 那列的延迟是亚毫秒级读数，随机器与负载浮动，`tools/check_eval_drift.py` 因此把它排除在逐字段比对之外——它在这里的作用只是与 live 形成对照，不是一个稳定指标。
+
+### Token 与费用
+
+`src/datapilot/usage.py` 在每次调用后记账。`TokenUsage` 记录 prompt / completion token、调用次数与缓存命中拆分，并带一个 `measured` 布尔量：线上运行取 DeepSeek 响应体的 `usage` 字段（`measured=true`），离线回放没有真实计费，token 数按官方字符换算比例（1 个英文字符 ≈ 0.3 token，1 个中日韩字符 ≈ 0.6）在本机估算并标为 `measured=false`。这两件事从不混用：`merge_usage` 对 `measured` 取合取，一次估算足以把整轮标成估算；估算一律按未命中的档位计价，不替调用方假设一个它并未获得的缓存折扣。
+
+费用按 `billing_model` 的官方单价折算，价格表以数据形式写在 `usage.py` 里，连同 `PRICE_SOURCE`（`https://api-docs.deepseek.com/zh-cn/quick_start/pricing`）、`PRICE_VERIFIED_ON`（`2026-09-28`）、币种与计量单位（`per_million_tokens`）一起导出，报价因此不会变成一个没有出处的数字。`price_for` 遇到价格表里没有的模型返回 `None` 而不是 `0.0`——「未计价」不该被读成「免费」，接口与界面据此显示「未计价」。已下线的 `deepseek-chat`、`deepseek-reasoner`（`2026/07/24 23:59` 北京时间停用）在表里指向 flash 的同一份单价，改一次价格不会只改到一个名字。
+
+一轮里可能发生多次调用（规划 + 修复），这些调用落在同一条 trace 上，账本按增量取出而不是累计值——否则评测里复用同一个客户端跑 14 条样例时，第一条样例会背走整轮的开销。
+
+用量与费用同时出现在三个出口：`/health` 回传价格口径（模型、币种、单位、来源、核验日期），`/ask` 的 trace 带 `usage`、`billing_model` 与 `cost_cny`，Streamlit 界面显示本次 token 用量、本次费用与计价模型，并标出「实测」还是「估算」。评测报告的 `usage` 块给出全量汇总。
+
+本仓库 `evals/report.json`（`mode: mock`）中 14 条样例合计 17 次模型调用、4442 token、0.004865 元，折合每条样例 0.000348 元，`usage_measured` 为 `false`，即上述估算口径，只能作量级参考。
 
 复现真实模型数字只需要两步：在仓库根目录双击 `配置DeepSeek密钥.bat` 存一次 Key（Windows DPAPI 按当前用户加密，明文不落盘），再双击 `运行真实模型评测.bat`。后者等价于
 
@@ -51,7 +63,7 @@ powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File tools\deepseek_launc
 
 它会解密 Key、把 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL` 与 `DATAPILOT_MOCK=0` 注入当前进程，用本项目 venv 跑 `evals/run_eval.py --live`，结果写到 `evals/report.live.json`，不覆盖上面这份 mock 基线；结束时无论成败都会还原进程内的环境变量。脚本会读回报告校验 `mode`，只要不是 `live` 就直接判失败退出，因此不存在以为是真实数字、其实是离线回放的误读。注意 live 只换掉 mock 类样例的 SQL 生成，scripted 类样例仍是脚本化探针，所以 `repair_success_rate`、`bounded_failure_rate` 由管线决定，而 `unsafe_block_rate` 的分母里有 2 条 mock 类危险请求，会随模型行为变化。
 
-单元测试 42 项，覆盖只读策略、执行、修复重试、字段画像、数据载入、API、配置与 MCP server：
+单元测试 63 项，覆盖只读策略、执行、修复重试、字段画像、数据载入、价格表与成本核算、API、配置与 MCP server：
 
 ```bash
 uv run --extra dev pytest -q

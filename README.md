@@ -6,11 +6,11 @@
 
 ### CiteGuard
 
-CiteGuard is an evidence-grounded citation verification agent. 答案里每条结论都要指回原文片段，检索不到相关片段时直接返回证据不足，而不是靠模型常识补写。检索是 Okapi BM25 加一道相关性下限，核验对每个 claim 单独判定，引用的片段解析不到就判为不支撑。24 条评测样例，43 项单元测试。细节见 [citeguard-agent/README.md](citeguard-agent/README.md)。
+CiteGuard is an evidence-grounded citation verification agent. 答案里每条结论都要指回原文片段，检索不到相关片段时直接返回证据不足，而不是靠模型常识补写。检索是 Okapi BM25 加一道相关性下限，另接了一条稠密通道与 RRF 融合（`CITEGUARD_RETRIEVER=auto|lexical|hybrid`），但拒答判据始终来自词面下限；核验对每个 claim 单独判定，引用的片段解析不到就判为不支撑。每次运行按官方单价折算 token 与费用，估算与实测分开标记。24 条评测样例，94 项单元测试。细节见 [citeguard-agent/README.md](citeguard-agent/README.md)。
 
 ### DataPilot
 
-DataPilot is a safe SQL data analysis agent. 上传 CSV、XLSX 或 SQLite 后用自然语言提问，生成的 SQL 先过只读策略再执行，失败时带着真实报错重试，最后给出图表规格与结论。执行走内存 SQLite，不跑模型生成的 Python，连接用完即关。14 条评测样例，42 项单元测试，另有 `Dockerfile` 构建的离线镜像。细节见 [datapilot-agent/README.md](datapilot-agent/README.md)。
+DataPilot is a safe SQL data analysis agent. 上传 CSV、XLSX 或 SQLite 后用自然语言提问，生成的 SQL 先过只读策略再执行，失败时带着真实报错重试，最后给出图表规格与结论。执行走内存 SQLite，不跑模型生成的 Python，连接用完即关。每次运行按官方单价折算 token 与费用，估算与实测分开标记。14 条评测样例，63 项单元测试，另有 `Dockerfile` 构建的离线镜像。细节见 [datapilot-agent/README.md](datapilot-agent/README.md)。
 
 ## 快速开始
 
@@ -37,12 +37,14 @@ DataPilot is a safe SQL data analysis agent. 上传 CSV、XLSX 或 SQLite 后用
 
 两个项目各有一套样例，同一套样例分别用离线客户端和 `deepseek-chat` 跑了两轮，数字来自 `evals/run_eval.py` 的真实运行，分别写进 `evals/report.json` 与 `evals/report.live.json`：
 
-| 项目 | 样例 | 单元测试 | `case_accuracy` mock | `case_accuracy` live | `mean_latency_ms` mock | `mean_latency_ms` live | `model_calls_total` mock | `model_calls_total` live |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| CiteGuard | 24 | 43 | 1.0 | 1.0 | 0.471 | 4501.274 | 42 | 68 |
-| DataPilot | 14 | 42 | 1.0 | 0.7857 | 0.416 | 569.787 | 17 | 17 |
+| 项目 | 样例 | 单元测试 | `case_accuracy` mock | `case_accuracy` live | `tokens_total` mock | `cost_cny_total` mock | `mean_latency_ms` mock | `mean_latency_ms` live | `model_calls_total` mock | `model_calls_total` live |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| CiteGuard | 24 | 94 | 1.0 | 1.0 | 56463 | 0.07148 | 0.654 | 4501.274 | 42 | 68 |
+| DataPilot | 14 | 63 | 1.0 | 0.7857 | 4442 | 0.004865 | 0.315 | 569.787 | 17 | 17 |
 
-mock 那列衡量的是管线本身——离线客户端用词面判定或脚本化探针替代模型——live 那列才是模型端到端表现。CiteGuard 两轮比率相同但模型调用数从 42 升到 68、延迟从 0.471 ms 变成 4501 ms，只有真实网络调用会带来这个量级的变化；DataPilot live 有 3 条样例未通过，两条是模型没照做破坏性语句、被自身改写成了只读查询，一条是聚合结果缺 `ORDER BY`，这些都逐条写在项目 README 里，没有被抹平。
+mock 那列衡量的是管线本身——离线客户端用词面判定或脚本化探针替代模型——live 那列才是模型端到端表现。CiteGuard 两轮比率相同但模型调用数从 42 升到 68、延迟从 0.654 ms 变成 4501 ms，只有真实网络调用会带来这个量级的变化；DataPilot live 有 3 条样例未通过，两条是模型没照做破坏性语句、被自身改写成了只读查询，一条是聚合结果缺 `ORDER BY`，这些都逐条写在项目 README 里，没有被抹平。
+
+token 与费用来自同一批运行结果：离线回放没有真实计费，token 数按官方字符换算比例在本机估算、按官方单价折算成元，报告里 `usage_measured` 为 `false`，只作量级参考；接入 DeepSeek 后改取响应体的 `usage` 字段、标记为实测，两者从不混用。mock 那列的延迟是亚毫秒级读数、随机器浮动，`tools/check_eval_drift.py` 因此把它排除在逐字段比对之外。
 
 两份 live 报告的 `mode` 字段都会被回读校验，不是 `live` 就直接判失败，所以不会出现以为是真实数字、其实是离线回放的误读。
 

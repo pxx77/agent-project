@@ -1,0 +1,120 @@
+{
+  "generated_at": "2026-09-27T16:57:35+00:00",
+  "mode": "mock",
+  "encoder": "hashing(dim=512)",
+  "fusion": "rrf",
+  "min_coverage": 0.15,
+  "chunk_count": 5,
+  "case_count": 24,
+  "retrievers": [
+    {
+      "retriever": "lexical",
+      "metrics": {
+        "case_accuracy": 1.0,
+        "answerable_grounded_rate": 1.0,
+        "insufficient_evidence_rate": 1.0,
+        "cross_document_coverage": 1.0,
+        "citation_resolvability": 1.0,
+        "mean_support_rate": 0.875,
+        "answerable_case_count": 21,
+        "insufficient_case_count": 3,
+        "unsupported_claims_total": 0,
+        "mean_latency_ms": 0.581,
+        "p95_latency_ms": 0.909,
+        "model_calls_total": 42,
+        "prompt_tokens_total": 41446,
+        "completion_tokens_total": 15017,
+        "tokens_total": 56463,
+        "cost_cny_total": 0.07148,
+        "cost_cny_per_case": 0.002978,
+        "usage_measured": false
+      },
+      "retrieval": {
+        "document_recall_at_5": 1.0,
+        "mean_chunks_returned": 2.083
+      }
+    },
+    {
+      "retriever": "dense",
+      "metrics": {
+        "case_accuracy": 0.8333,
+        "answerable_grounded_rate": 1.0,
+        "insufficient_evidence_rate": 0.0,
+        "cross_document_coverage": 0.6667,
+        "citation_resolvability": 1.0,
+        "mean_support_rate": 1.0,
+        "answerable_case_count": 21,
+        "insufficient_case_count": 3,
+        "unsupported_claims_total": 0,
+        "mean_latency_ms": 0.766,
+        "p95_latency_ms": 1.069,
+        "model_calls_total": 48,
+        "prompt_tokens_total": 50342,
+        "completion_tokens_total": 15059,
+        "tokens_total": 65401,
+        "cost_cny_total": 0.08046,
+        "cost_cny_per_case": 0.003353,
+        "usage_measured": false
+      },
+      "retrieval": {
+        "document_recall_at_5": 1.0,
+        "mean_chunks_returned": 3.292
+      }
+    },
+    {
+      "retriever": "hybrid",
+      "metrics": {
+        "case_accuracy": 0.9583,
+        "answerable_grounded_rate": 1.0,
+        "insufficient_evidence_rate": 1.0,
+        "cross_document_coverage": 0.6667,
+        "citation_resolvability": 1.0,
+        "mean_support_rate": 0.875,
+        "answerable_case_count": 21,
+        "insufficient_case_count": 3,
+        "unsupported_claims_total": 0,
+        "mean_latency_ms": 0.708,
+        "p95_latency_ms": 0.995,
+        "model_calls_total": 42,
+        "prompt_tokens_total": 41166,
+        "completion_tokens_total": 14890,
+        "tokens_total": 56056,
+        "cost_cny_total": 0.070946,
+        "cost_cny_per_case": 0.002956,
+        "usage_measured": false
+      },
+      "retrieval": {
+        "document_recall_at_5": 1.0,
+        "mean_chunks_returned": 2.083
+      }
+    },
+    {
+      "retriever": "hybrid+augment",
+      "metrics": {
+        "case_accuracy": 0.9583,
+        "answerable_grounded_rate": 1.0,
+        "insufficient_evidence_rate": 1.0,
+        "cross_document_coverage": 0.6667,
+        "citation_resolvability": 1.0,
+        "mean_support_rate": 0.875,
+        "answerable_case_count": 21,
+        "insufficient_case_count": 3,
+        "unsupported_claims_total": 0,
+        "mean_latency_ms": 0.8,
+        "p95_latency_ms": 1.159,
+        "model_calls_total": 42,
+        "prompt_tokens_total": 46255,
+        "completion_tokens_total": 14890,
+        "tokens_total": 61145,
+        "cost_cny_total": 0.076035,
+        "cost_cny_per_case": 0.003168,
+        "usage_measured": false
+      },
+      "retrieval": {
+        "document_recall_at_5": 1.0,
+        "mean_chunks_returned": 2.833
+      }
+    }
+  ],
+  "note": "哈希编码器是词面编码器：它与 BM25 看的是同一类信号，因此融合不带来语义增益，在 cross-document-audit-retention 上还会打乱 BM25 已排序正确的 top-5，使 case_accuracy 从 1.0 降到 0.9583、cross_document_coverage 从 1.0 降到 0.6667。dense 单独使用时无法判断『证据不足』：三个无关问题全部被作答，insufficient_evidence_rate 为 0，这是保留 BM25 词面下限作为拒答判据的原因。接入真实 embedding 服务（CITEGUARD_EMBEDDING_PROVIDER=http）后稠密通道才承载语义信息，届时可用 CITEGUARD_RETRIEVER=hybrid 启用融合。"
+}

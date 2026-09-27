@@ -2,7 +2,7 @@ import streamlit as st
 
 from citeguard.config import Settings
 from citeguard.ingestion import chunk_document, parse_bytes
-from citeguard.retrieval import BM25Index
+from citeguard.retrieval import build_index
 from citeguard.workflow import build_fixture_agent, run_agent
 
 st.set_page_config(page_title="CiteGuard", page_icon="C", layout="wide")
@@ -37,7 +37,7 @@ if st.button("建立文档索引", disabled=not uploaded_files, type="primary"):
             names.append(uploaded_file.name)
         if not chunks:
             raise ValueError("没有从文件中提取到文本")
-        st.session_state.citeguard_index = BM25Index(chunks)
+        st.session_state.citeguard_index = build_index(chunks, settings)
         st.session_state.citeguard_source = "、".join(names)
         st.success(f"索引完成：{len(names)} 个文件，{len(chunks)} 个文本块")
     except Exception as exc:
@@ -56,10 +56,18 @@ if st.button("运行 CiteGuard Agent", disabled=not question.strip(), type="prim
             result = run_agent(question, st.session_state.citeguard_index)
         st.subheader("回答")
         st.write(result.answer)
-        col1, col2, col3 = st.columns(3)
+        usage = result.trace.usage
+        cost = result.trace.cost_cny
+        col1, col2, col3, col4 = st.columns(4)
         col1.metric("证据支持率", f"{result.verification.support_rate:.0%}")
         col2.metric("引用数量", len(result.citations))
         col3.metric("回答来源", result.trace.provider)
+        col4.metric("本次费用", f"¥{cost:.4f}" if cost is not None else "未计价")
+        st.caption(
+            f"本次用量 {usage.total_tokens} tokens（输入 {usage.prompt_tokens} / 输出 {usage.completion_tokens}）"
+            f"｜{'实测' if usage.measured else '估算'}"
+            f"｜计价模型 {result.trace.billing_model or '未计价'}"
+        )
         st.subheader("引用证据")
         for chunk in result.evidence:
             st.info(f"[{chunk.id}] {chunk.text}")

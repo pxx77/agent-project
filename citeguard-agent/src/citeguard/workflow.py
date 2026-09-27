@@ -5,8 +5,9 @@ import time
 
 from .config import Settings
 from .llm import ModelClient, build_model_client
-from .models import AgentResult, Chunk, Claim, Trace, Verification
-from .retrieval import BM25Index
+from .models import AgentResult, Chunk, Claim, TokenUsage, Trace, Verification
+from .retrieval import Retriever, build_index
+from .usage import cost_of, drain_usage
 
 ANSWER_INSTRUCTION = (
     "只允许依据证据回答。返回 JSON："
@@ -24,6 +25,28 @@ VERIFY_INSTRUCTION = (
 def _evidence_payload(evidence: list[Chunk]) -> list[dict]:
     """Serialize retrieved chunks into the shape both model calls expect."""
     return [{"id": chunk.id, "text": chunk.text} for chunk in evidence]
+
+
+def _record_usage(trace: Trace, client: ModelClient | None, settings: Settings) -> None:
+    """Attach the tokens this run consumed, and what they cost.
+
+    The drain is per run rather than per client lifetime, because the evaluation reuses one client
+    across every case: a lifetime counter would report the whole run's tokens on the first case and
+    double-count from there.
+
+    Offline replay clients have no real model of their own, so their tokens are priced at the
+    configured model: the figure answers "what would these tokens have cost" instead of inventing a
+    rate for a client that was never billed. Nothing was billed, which is exactly why
+    ``usage.measured`` stays False.
+    """
+    if client is None:
+        return
+    usage: TokenUsage = drain_usage(client)
+    billing_model = client.model if client.provider == "deepseek" else settings.model
+    amount = cost_of(usage, billing_model)
+    trace.usage = usage
+    trace.billing_model = billing_model
+    trace.cost_cny = round(amount, 8) if amount is not None else None
 
 
 def _collect_claims(payload: dict, answer: str, evidence: list[Chunk]) -> list[Claim]:
@@ -63,13 +86,14 @@ def _verify_claim(claim: Claim, evidence: list[Chunk], client: ModelClient) -> t
     return claim.model_copy(update={"status": status}), True
 
 
-def run_agent(question: str, index: BM25Index, client: ModelClient | None = None) -> AgentResult:
+def run_agent(question: str, index: Retriever, client: ModelClient | None = None) -> AgentResult:
     started = time.perf_counter()
     settings = Settings.from_env()
     trace = Trace(
         states=["plan", "retrieve"],
         provider="not_called",
         model="not-called",
+        retriever=index.name,
     )
     evidence = index.search(question, limit=5)
     trace.retrieved_chunk_ids = [chunk.id for chunk in evidence]
@@ -77,6 +101,8 @@ def run_agent(question: str, index: BM25Index, client: ModelClient | None = None
         trace.status = "insufficient_evidence"
         trace.states.append("verify")
         trace.duration_ms = (time.perf_counter() - started) * 1000
+        # No model call happened, so this drains an empty ledger and prices nothing.
+        _record_usage(trace, client, settings)
         return AgentResult(answer="Insufficient evidence in the indexed documents.", verification=Verification(), trace=trace)
     client = client or build_model_client(settings)
     trace.provider = client.provider
@@ -113,6 +139,7 @@ def run_agent(question: str, index: BM25Index, client: ModelClient | None = None
     else:
         trace.status = "success"
     trace.duration_ms = (time.perf_counter() - started) * 1000
+    _record_usage(trace, client, settings)
     citations = list(dict.fromkeys(citation for claim in verified for citation in claim.citations))
     return AgentResult(
         answer=answer,
@@ -150,7 +177,7 @@ def build_fixture_agent(corpus: tuple[str, ...] | list[str] | None = None) -> "F
             size=180,
             overlap=20,
         )
-        return FixtureAgent(BM25Index(chunks))
+        return FixtureAgent(build_index(chunks))
 
     fixtures = Path(__file__).resolve().parents[2] / "fixtures"
     chunks: list[Chunk] = []
@@ -159,11 +186,11 @@ def build_fixture_agent(corpus: tuple[str, ...] | list[str] | None = None) -> "F
         document = parse_bytes(name, (fixtures / name).read_bytes())
         names[document.id] = document.name
         chunks.extend(chunk_document(document))
-    return FixtureAgent(BM25Index(chunks), document_names=names)
+    return FixtureAgent(build_index(chunks), document_names=names)
 
 
 class FixtureAgent:
-    def __init__(self, index: BM25Index, document_names: dict[str, str] | None = None):
+    def __init__(self, index: Retriever, document_names: dict[str, str] | None = None):
         self.index = index
         self.document_names = document_names or {}
 
