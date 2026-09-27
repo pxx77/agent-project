@@ -112,6 +112,30 @@ finally {
 
 $launcherContent = Get-Content -LiteralPath $helper -Raw
 Assert-True ($launcherContent -notmatch "'RunService'") 'Launcher does not advertise an unimplemented RunService mode'
+Assert-True ($launcherContent -match "'Eval'") 'Launcher advertises the implemented Eval mode'
+Assert-True ($launcherContent -match 'function Invoke-AgentEval') 'Launcher implements the Eval mode'
+Assert-Equal ((Get-EvalEnvironmentNames) -join '|') 'DEEPSEEK_API_KEY|DEEPSEEK_BASE_URL|DEEPSEEK_MODEL|CITEGUARD_MOCK|DATAPILOT_MOCK' 'Eval mode injects the live model environment'
+
+$missingReportPath = Join-Path ([IO.Path]::GetTempPath()) "agent-project-missing-report-$PID.json"
+$mockReportPath = Join-Path ([IO.Path]::GetTempPath()) "agent-project-mock-report-$PID.json"
+$liveReportPath = Join-Path ([IO.Path]::GetTempPath()) "agent-project-live-report-$PID.json"
+if (Test-Path -LiteralPath $missingReportPath) {
+    Remove-Item -LiteralPath $missingReportPath -Force
+}
+try {
+    [IO.File]::WriteAllText($mockReportPath, '{"mode":"mock","provider":"mock"}', [Text.Encoding]::UTF8)
+    [IO.File]::WriteAllText($liveReportPath, '{"mode":"live","provider":"deepseek"}', [Text.Encoding]::UTF8)
+    Assert-Throws { Test-EvalReportIsLive -Path $missingReportPath -ProjectName 'CiteGuard' } 'Eval mode rejects a missing report'
+    Assert-Throws { Test-EvalReportIsLive -Path $mockReportPath -ProjectName 'CiteGuard' } 'Eval mode rejects a report that is not live'
+    Assert-True (Test-EvalReportIsLive -Path $liveReportPath -ProjectName 'CiteGuard') 'Eval mode accepts a live report'
+}
+finally {
+    foreach ($temporaryReport in @($mockReportPath, $liveReportPath)) {
+        if (Test-Path -LiteralPath $temporaryReport) {
+            Remove-Item -LiteralPath $temporaryReport -Force
+        }
+    }
+}
 
 $parentKeyBefore = [Environment]::GetEnvironmentVariable('DEEPSEEK_API_KEY', [EnvironmentVariableTarget]::Process)
 $childEnvironmentSecure = ConvertTo-SecureString 'launcher-child-only-key' -AsPlainText -Force
@@ -129,6 +153,8 @@ $testKeyPath = Join-Path ([IO.Path]::GetTempPath()) "agent-project-launcher-$PID
 $env:AGENT_PROJECT_DEEPSEEK_KEY_PATH = $testKeyPath
 try {
     Assert-Throws { Get-DeepSeekKey } 'Missing encrypted credential is rejected'
+    Assert-Throws { Invoke-DeepSeekLauncher -Mode 'Eval' -Projects @('CiteGuard') } 'Eval mode requires a configured credential'
+    Assert-Equal ([Environment]::GetEnvironmentVariable('DEEPSEEK_API_KEY', [EnvironmentVariableTarget]::Process)) $parentKeyBefore 'Eval mode does not leak the key into the parent environment when it fails'
 
     $testSecure = ConvertTo-SecureString 'launcher-dpapi-roundtrip' -AsPlainText -Force
     try {
@@ -163,7 +189,8 @@ $batchFiles = @(
     '6YWN572uRGVlcFNlZWvlr4bpkqUuYmF0',
     '5ZCv5YqoRGF0YVBpbG90LmJhdA==',
     '5ZCv5YqoQ2l0ZUd1YXJkLmJhdA==',
-    '5LiA6ZSu5ZCv5Yqo5Lik5Liq6aG555uuLmJhdA=='
+    '5LiA6ZSu5ZCv5Yqo5Lik5Liq6aG555uuLmJhdA==',
+    '6L+Q6KGM55yf5a6e5qih5Z6L6K+E5rWLLmJhdA=='
 ) | ForEach-Object {
     [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($_))
 }

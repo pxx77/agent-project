@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [ValidateSet('Configure', 'Start')]
+    [ValidateSet('Configure', 'Start', 'Eval')]
     [string] $Mode = 'Start',
 
     [string[]] $Projects = @(),
@@ -8,6 +8,8 @@ param(
     [switch] $NoBrowser,
 
     [switch] $HiddenWindows,
+
+    [string] $EvalReport = 'evals\report.live.json',
 
     [ValidateRange(1, 300)]
     [int] $TimeoutSeconds = 60
@@ -658,11 +660,143 @@ function Set-DeepSeekKeyInteractive {
     }
 }
 
+function Get-EvalEnvironmentNames {
+    [CmdletBinding()]
+    param()
+
+    return @(
+        'DEEPSEEK_API_KEY',
+        'DEEPSEEK_BASE_URL',
+        'DEEPSEEK_MODEL',
+        'CITEGUARD_MOCK',
+        'DATAPILOT_MOCK'
+    )
+}
+
+function Test-EvalReportIsLive {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string] $Path,
+
+        [Parameter(Mandatory = $true)]
+        [string] $ProjectName
+    )
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "$ProjectName did not write an evaluation report at $Path."
+    }
+
+    try {
+        $report = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+    }
+    catch {
+        throw "$ProjectName wrote an unreadable evaluation report at $Path."
+    }
+
+    $mode = $null
+    if ($report.PSObject.Properties['mode']) {
+        $mode = $report.mode
+    }
+    if ($mode -ne 'live') {
+        throw "$ProjectName evaluation reported mode '$mode' instead of 'live'. The report was produced without a working DeepSeek Key."
+    }
+
+    return $true
+}
+
+function Invoke-AgentEval {
+    [CmdletBinding()]
+    param(
+        [string[]] $Projects,
+
+        [string] $ReportPath = 'evals\report.live.json'
+    )
+
+    $projectNames = @(Resolve-AgentProjectNames -Projects $Projects)
+    $deepSeekKey = Get-DeepSeekKey
+
+    $environmentNames = Get-EvalEnvironmentNames
+    $savedEnvironment = @{}
+    foreach ($name in $environmentNames) {
+        $savedEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, [EnvironmentVariableTarget]::Process)
+    }
+
+    $plainText = $null
+    $results = New-Object Collections.Generic.List[object]
+    $errors = New-Object Collections.Generic.List[string]
+    try {
+        $plainText = Convert-SecureStringToPlainText -SecureString $deepSeekKey
+        if ([string]::IsNullOrWhiteSpace($plainText)) {
+            throw 'DeepSeek Key cannot be empty.'
+        }
+
+        [Environment]::SetEnvironmentVariable('DEEPSEEK_API_KEY', $plainText, [EnvironmentVariableTarget]::Process)
+        [Environment]::SetEnvironmentVariable('DEEPSEEK_BASE_URL', 'https://api.deepseek.com', [EnvironmentVariableTarget]::Process)
+        [Environment]::SetEnvironmentVariable('DEEPSEEK_MODEL', 'deepseek-chat', [EnvironmentVariableTarget]::Process)
+        [Environment]::SetEnvironmentVariable('CITEGUARD_MOCK', '0', [EnvironmentVariableTarget]::Process)
+        [Environment]::SetEnvironmentVariable('DATAPILOT_MOCK', '0', [EnvironmentVariableTarget]::Process)
+
+        foreach ($projectName in $projectNames) {
+            $definition = Get-AgentDefinition -Name $projectName
+            [void] (Test-AgentDefinition -Definition $definition)
+
+            $evalScript = Join-Path $definition.Root 'evals\run_eval.py'
+            if (-not (Test-Path -LiteralPath $evalScript -PathType Leaf)) {
+                throw "$($definition.Name) evaluation script was not found: $evalScript"
+            }
+
+            $reportFile = Join-Path $definition.Root $ReportPath
+            Write-Host "Running the $($definition.Name) live evaluation..."
+
+            Push-Location -LiteralPath $definition.Root
+            try {
+                & $definition.Python $evalScript '--live' '--output' $reportFile
+                $exitCode = $LASTEXITCODE
+            }
+            finally {
+                Pop-Location
+            }
+
+            if ($exitCode -ne 0) {
+                $errors.Add("$($definition.Name) evaluation exited with code $exitCode")
+                continue
+            }
+
+            try {
+                Test-EvalReportIsLive -Path $reportFile -ProjectName $definition.Name
+            }
+            catch {
+                $errors.Add($_.Exception.Message)
+                continue
+            }
+
+            $results.Add([pscustomobject]@{
+                Name       = $definition.Name
+                ReportPath = $reportFile
+            })
+            Write-Host "$($definition.Name) live report written to $reportFile"
+        }
+    }
+    finally {
+        foreach ($name in $environmentNames) {
+            [Environment]::SetEnvironmentVariable($name, $savedEnvironment[$name], [EnvironmentVariableTarget]::Process)
+        }
+        $plainText = $null
+        $deepSeekKey.Dispose()
+    }
+
+    if ($errors.Count -gt 0) {
+        throw "One or more live evaluations failed: $($errors -join '; ')"
+    }
+    return $results.ToArray()
+}
+
 function Invoke-DeepSeekLauncher {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
-        [ValidateSet('Configure', 'Start')]
+        [ValidateSet('Configure', 'Start', 'Eval')]
         [string] $Mode,
 
         [string[]] $Projects,
@@ -671,6 +805,8 @@ function Invoke-DeepSeekLauncher {
 
         [switch] $HiddenWindows,
 
+        [string] $EvalReport = 'evals\report.live.json',
+
         [int] $TimeoutSeconds = 60
     )
 
@@ -678,12 +814,18 @@ function Invoke-DeepSeekLauncher {
         Set-DeepSeekKeyInteractive
         return
     }
+
+    if ($Mode -eq 'Eval') {
+        [void] (Invoke-AgentEval -Projects $Projects -ReportPath $EvalReport)
+        return
+    }
+
     [void] (Start-SelectedProjects -Projects $Projects -NoBrowser:$NoBrowser -HiddenWindows:$HiddenWindows -TimeoutSeconds $TimeoutSeconds)
 }
 
 if ($MyInvocation.InvocationName -ne '.') {
     try {
-        Invoke-DeepSeekLauncher -Mode $Mode -Projects $Projects -NoBrowser:$NoBrowser -HiddenWindows:$HiddenWindows -TimeoutSeconds $TimeoutSeconds
+        Invoke-DeepSeekLauncher -Mode $Mode -Projects $Projects -NoBrowser:$NoBrowser -HiddenWindows:$HiddenWindows -EvalReport $EvalReport -TimeoutSeconds $TimeoutSeconds
         exit 0
     }
     catch {

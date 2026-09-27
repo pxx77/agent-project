@@ -41,6 +41,14 @@ BM25 会给任何共享一个词的片段非零分数，光靠排序无法把无
 
 `mean_support_rate` 是 21 条可答案例（各 1.0）与 3 条证据不足案例（各 0.0）的加权结果，不是异常值。离线模式用词面判定代替模型判定，所以这些数字衡量的是检索、核验与统计管线本身，不代表 DeepSeek 的判断质量；真实模型数字需要在有 Key 的环境跑 `--live`。
 
+复现真实模型数字只需要两步：在仓库根目录双击 `配置DeepSeek密钥.bat` 存一次 Key（Windows DPAPI 按当前用户加密，明文不落盘），再双击 `运行真实模型评测.bat`。后者等价于
+
+```powershell
+powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File tools\deepseek_launcher.ps1 -Mode Eval
+```
+
+它会解密 Key、把 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL` 与 `CITEGUARD_MOCK=0` 注入当前进程，用本项目 venv 跑 `evals/run_eval.py --live`，结果写到 `evals/report.live.json`，不覆盖上面这份 mock 基线；结束时无论成败都会还原进程内的环境变量。脚本会读回报告校验 `mode`，只要不是 `live` 就直接判失败退出，因此不存在以为是真实数字、其实是离线回放的误读。每次运行会真实调用 DeepSeek，离线基线的 `model_calls_total` 是 42。
+
 单元测试 31 项，覆盖分词、BM25 排序、相关性下限、核验状态流转、API 与配置：
 
 ```bash
