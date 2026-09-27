@@ -36,6 +36,8 @@ class Trace(BaseModel):
     retries: int = 0
     duration_ms: float = 0.0
     model_calls: int = 0
+    provider: str = "mock"
+    model: str = "deterministic-fixture"
 
 
 class AgentResult(BaseModel):

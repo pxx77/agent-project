@@ -1,34 +1,672 @@
 {
+  "generated_at": "2026-09-27T07:08:19+00:00",
+  "provider": "mock",
+  "model": "deterministic-fixture",
+  "mode": "mock",
+  "corpus": [
+    "agent_evaluation_handbook.md",
+    "agent_incident_policy.txt",
+    "ai_agents.md"
+  ],
+  "chunk_count": 5,
+  "case_count": 24,
+  "metrics": {
+    "case_accuracy": 1.0,
+    "answerable_grounded_rate": 1.0,
+    "insufficient_evidence_rate": 1.0,
+    "cross_document_coverage": 1.0,
+    "citation_resolvability": 1.0,
+    "mean_support_rate": 0.875,
+    "answerable_case_count": 21,
+    "insufficient_case_count": 3,
+    "unsupported_claims_total": 0,
+    "mean_latency_ms": 0.471,
+    "p95_latency_ms": 0.956,
+    "model_calls_total": 42
+  },
   "cases": [
     {
-      "question": "What does the document say about evaluation?",
-      "expected_supported": true,
+      "id": "handbook-thresholds",
+      "question": "智能体发布前必须达到哪些评测阈值？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_evaluation_handbook.md"
+      ],
       "citations": [
-        "fixture:0"
+        "doc-403cd41ed70a:0",
+        "doc-403cd41ed70a:1"
+      ],
+      "resolved_citations": [
+        "doc-403cd41ed70a:0",
+        "doc-403cd41ed70a:1"
+      ],
+      "sources": [
+        "agent_evaluation_handbook.md"
       ],
       "status": "success",
       "support_rate": 1.0,
-      "latency_ms": 0.0791000020399224
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 3,
+      "latency_ms": 0.983,
+      "correct": true
     },
     {
-      "question": "What is the agent's latency metric?",
-      "expected_supported": true,
+      "id": "handbook-high-risk-approval",
+      "question": "哪些高风险任务在执行前需要人工批准？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_evaluation_handbook.md"
+      ],
       "citations": [
-        "fixture:0"
+        "doc-403cd41ed70a:0",
+        "doc-2b5fb10309d1:0"
+      ],
+      "resolved_citations": [
+        "doc-403cd41ed70a:0",
+        "doc-2b5fb10309d1:0"
+      ],
+      "sources": [
+        "agent_evaluation_handbook.md",
+        "agent_incident_policy.txt"
       ],
       "status": "success",
       "support_rate": 1.0,
-      "latency_ms": 0.02559999848017469
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 2,
+      "latency_ms": 0.53,
+      "correct": true
     },
     {
-      "question": "Who won the 2050 election?",
-      "expected_supported": false,
+      "id": "handbook-retry-limit",
+      "question": "工具调用失败后最多可以自动重试几次？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_evaluation_handbook.md"
+      ],
+      "citations": [
+        "doc-403cd41ed70a:0",
+        "doc-403cd41ed70a:1"
+      ],
+      "resolved_citations": [
+        "doc-403cd41ed70a:0",
+        "doc-403cd41ed70a:1"
+      ],
+      "sources": [
+        "agent_evaluation_handbook.md"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 3,
+      "latency_ms": 0.424,
+      "correct": true
+    },
+    {
+      "id": "handbook-insufficient-evidence",
+      "question": "找不到足够证据时，智能体应该怎么做？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_evaluation_handbook.md"
+      ],
+      "citations": [
+        "doc-403cd41ed70a:0",
+        "doc-2b5fb10309d1:0"
+      ],
+      "resolved_citations": [
+        "doc-403cd41ed70a:0",
+        "doc-2b5fb10309d1:0"
+      ],
+      "sources": [
+        "agent_evaluation_handbook.md",
+        "agent_incident_policy.txt"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 2,
+      "latency_ms": 0.434,
+      "correct": true
+    },
+    {
+      "id": "handbook-trace-fields",
+      "question": "运行轨迹需要记录哪些字段，保存多久？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_evaluation_handbook.md"
+      ],
+      "citations": [
+        "doc-403cd41ed70a:0",
+        "doc-2b5fb10309d1:0"
+      ],
+      "resolved_citations": [
+        "doc-403cd41ed70a:0",
+        "doc-2b5fb10309d1:0"
+      ],
+      "sources": [
+        "agent_evaluation_handbook.md",
+        "agent_incident_policy.txt"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 2,
+      "latency_ms": 0.41,
+      "correct": true
+    },
+    {
+      "id": "incident-level-timelines",
+      "question": "P0、P1 和 P2 的确认与处置时限分别是什么？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_incident_policy.txt"
+      ],
+      "citations": [
+        "doc-2b5fb10309d1:0",
+        "doc-2b5fb10309d1:1"
+      ],
+      "resolved_citations": [
+        "doc-2b5fb10309d1:0",
+        "doc-2b5fb10309d1:1"
+      ],
+      "sources": [
+        "agent_incident_policy.txt"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 2,
+      "latency_ms": 0.362,
+      "correct": true
+    },
+    {
+      "id": "incident-p1-definition",
+      "question": "什么情况下任务失败会被定义为 P1？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_incident_policy.txt"
+      ],
+      "citations": [
+        "doc-2b5fb10309d1:0",
+        "doc-403cd41ed70a:0"
+      ],
+      "resolved_citations": [
+        "doc-2b5fb10309d1:0",
+        "doc-403cd41ed70a:0"
+      ],
+      "sources": [
+        "agent_evaluation_handbook.md",
+        "agent_incident_policy.txt"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 2,
+      "latency_ms": 0.454,
+      "correct": true
+    },
+    {
+      "id": "incident-restore-approval",
+      "question": "P0 事件后恢复工具权限需要谁批准？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_incident_policy.txt"
+      ],
+      "citations": [
+        "doc-2b5fb10309d1:0",
+        "doc-403cd41ed70a:0"
+      ],
+      "resolved_citations": [
+        "doc-2b5fb10309d1:0",
+        "doc-403cd41ed70a:0"
+      ],
+      "sources": [
+        "agent_evaluation_handbook.md",
+        "agent_incident_policy.txt"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 3,
+      "latency_ms": 0.433,
+      "correct": true
+    },
+    {
+      "id": "incident-postmortem",
+      "question": "哪些事件必须进行书面复盘，复盘时限是多少？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_incident_policy.txt"
+      ],
+      "citations": [
+        "doc-2b5fb10309d1:0",
+        "doc-2b5fb10309d1:1"
+      ],
+      "resolved_citations": [
+        "doc-2b5fb10309d1:0",
+        "doc-2b5fb10309d1:1"
+      ],
+      "sources": [
+        "agent_incident_policy.txt"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 3,
+      "latency_ms": 0.373,
+      "correct": true
+    },
+    {
+      "id": "cross-document-audit-retention",
+      "question": "手册和故障制度对审计材料保存时间的要求是否一致？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_evaluation_handbook.md",
+        "agent_incident_policy.txt"
+      ],
+      "citations": [
+        "doc-2b5fb10309d1:0",
+        "doc-403cd41ed70a:0"
+      ],
+      "resolved_citations": [
+        "doc-2b5fb10309d1:0",
+        "doc-403cd41ed70a:0"
+      ],
+      "sources": [
+        "agent_evaluation_handbook.md",
+        "agent_incident_policy.txt"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 3,
+      "latency_ms": 0.956,
+      "correct": true
+    },
+    {
+      "id": "cross-document-approval",
+      "question": "手册和故障制度分别在什么场景要求人工批准？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_evaluation_handbook.md",
+        "agent_incident_policy.txt"
+      ],
+      "citations": [
+        "doc-2b5fb10309d1:0",
+        "doc-403cd41ed70a:0"
+      ],
+      "resolved_citations": [
+        "doc-2b5fb10309d1:0",
+        "doc-403cd41ed70a:0"
+      ],
+      "sources": [
+        "agent_evaluation_handbook.md",
+        "agent_incident_policy.txt"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 3,
+      "latency_ms": 0.687,
+      "correct": true
+    },
+    {
+      "id": "handbook-metric-definitions",
+      "question": "任务成功率和引用准确率分别按什么口径统计？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_evaluation_handbook.md"
+      ],
+      "citations": [
+        "doc-403cd41ed70a:0",
+        "doc-403cd41ed70a:1"
+      ],
+      "resolved_citations": [
+        "doc-403cd41ed70a:0",
+        "doc-403cd41ed70a:1"
+      ],
+      "sources": [
+        "agent_evaluation_handbook.md"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 2,
+      "latency_ms": 0.459,
+      "correct": true
+    },
+    {
+      "id": "handbook-negative-case-ratio",
+      "question": "负向案例占比不得低于多少，测试集多久更新一次？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_evaluation_handbook.md"
+      ],
+      "citations": [
+        "doc-403cd41ed70a:1",
+        "doc-403cd41ed70a:0"
+      ],
+      "resolved_citations": [
+        "doc-403cd41ed70a:1",
+        "doc-403cd41ed70a:0"
+      ],
+      "sources": [
+        "agent_evaluation_handbook.md"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 2,
+      "latency_ms": 0.623,
+      "correct": true
+    },
+    {
+      "id": "handbook-red-team",
+      "question": "发布前的红队测试要覆盖哪几类风险，攻击样例不得少于多少条？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_evaluation_handbook.md"
+      ],
+      "citations": [
+        "doc-403cd41ed70a:1",
+        "doc-403cd41ed70a:0"
+      ],
+      "resolved_citations": [
+        "doc-403cd41ed70a:1",
+        "doc-403cd41ed70a:0"
+      ],
+      "sources": [
+        "agent_evaluation_handbook.md"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 2,
+      "latency_ms": 0.442,
+      "correct": true
+    },
+    {
+      "id": "handbook-canary-ratio",
+      "question": "灰度发布按什么比例放量，每批之间至少间隔多久？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_evaluation_handbook.md"
+      ],
+      "citations": [
+        "doc-403cd41ed70a:1"
+      ],
+      "resolved_citations": [
+        "doc-403cd41ed70a:1"
+      ],
+      "sources": [
+        "agent_evaluation_handbook.md"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 1,
+      "latency_ms": 0.279,
+      "correct": true
+    },
+    {
+      "id": "handbook-rollback-trigger",
+      "question": "出现什么情况必须立即回滚，回滚后多久要提交复盘？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_evaluation_handbook.md"
+      ],
+      "citations": [
+        "doc-403cd41ed70a:1",
+        "doc-2b5fb10309d1:0"
+      ],
+      "resolved_citations": [
+        "doc-403cd41ed70a:1",
+        "doc-2b5fb10309d1:0"
+      ],
+      "sources": [
+        "agent_evaluation_handbook.md",
+        "agent_incident_policy.txt"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 3,
+      "latency_ms": 0.408,
+      "correct": true
+    },
+    {
+      "id": "handbook-exemption-limit",
+      "question": "评测阈值豁免的有效期最长多久，哪些章节的要求不允许豁免？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_evaluation_handbook.md"
+      ],
+      "citations": [
+        "doc-403cd41ed70a:1",
+        "doc-403cd41ed70a:0"
+      ],
+      "resolved_citations": [
+        "doc-403cd41ed70a:1",
+        "doc-403cd41ed70a:0"
+      ],
+      "sources": [
+        "agent_evaluation_handbook.md"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 2,
+      "latency_ms": 0.428,
+      "correct": true
+    },
+    {
+      "id": "incident-severity-example",
+      "question": "智能体在没有人工批准的情况下删除生产数据，按什么等级处理？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_incident_policy.txt"
+      ],
+      "citations": [
+        "doc-2b5fb10309d1:0",
+        "doc-403cd41ed70a:0"
+      ],
+      "resolved_citations": [
+        "doc-2b5fb10309d1:0",
+        "doc-403cd41ed70a:0"
+      ],
+      "sources": [
+        "agent_evaluation_handbook.md",
+        "agent_incident_policy.txt"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 2,
+      "latency_ms": 0.75,
+      "correct": true
+    },
+    {
+      "id": "incident-p0-committee-notice",
+      "question": "P0 事件必须在多久内向平台治理委员会提交首次进展说明？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_incident_policy.txt"
+      ],
+      "citations": [
+        "doc-2b5fb10309d1:1",
+        "doc-2b5fb10309d1:0"
+      ],
+      "resolved_citations": [
+        "doc-2b5fb10309d1:1",
+        "doc-2b5fb10309d1:0"
+      ],
+      "sources": [
+        "agent_incident_policy.txt"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 2,
+      "latency_ms": 0.587,
+      "correct": true
+    },
+    {
+      "id": "incident-shift-handover",
+      "question": "值班是怎么安排的，交班记录至少保存多久？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_incident_policy.txt"
+      ],
+      "citations": [
+        "doc-2b5fb10309d1:1",
+        "doc-2b5fb10309d1:0"
+      ],
+      "resolved_citations": [
+        "doc-2b5fb10309d1:1",
+        "doc-2b5fb10309d1:0"
+      ],
+      "sources": [
+        "agent_incident_policy.txt"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 3,
+      "latency_ms": 0.494,
+      "correct": true
+    },
+    {
+      "id": "cross-document-postmortem-deadline",
+      "question": "手册和故障制度对复盘提交时限的要求分别是什么？",
+      "expectation": "answerable",
+      "expected_sources": [
+        "agent_evaluation_handbook.md",
+        "agent_incident_policy.txt"
+      ],
+      "citations": [
+        "doc-2b5fb10309d1:0",
+        "doc-403cd41ed70a:1"
+      ],
+      "resolved_citations": [
+        "doc-2b5fb10309d1:0",
+        "doc-403cd41ed70a:1"
+      ],
+      "sources": [
+        "agent_evaluation_handbook.md",
+        "agent_incident_policy.txt"
+      ],
+      "status": "success",
+      "support_rate": 1.0,
+      "supported_claims": 1,
+      "unsupported_claims": 0,
+      "model_calls": 2,
+      "retrieved_chunks": 3,
+      "latency_ms": 0.682,
+      "correct": true
+    },
+    {
+      "id": "unrelated-election",
+      "question": "谁赢得了 2050 年总统选举？",
+      "expectation": "insufficient",
+      "expected_sources": [],
       "citations": [],
+      "resolved_citations": [],
+      "sources": [],
       "status": "insufficient_evidence",
       "support_rate": 0.0,
-      "latency_ms": 0.017000002117129043
+      "supported_claims": 0,
+      "unsupported_claims": 0,
+      "model_calls": 0,
+      "retrieved_chunks": 0,
+      "latency_ms": 0.043,
+      "correct": true
+    },
+    {
+      "id": "unrelated-recipe",
+      "question": "如何用慢炖锅制作番茄汤？",
+      "expectation": "insufficient",
+      "expected_sources": [],
+      "citations": [],
+      "resolved_citations": [],
+      "sources": [],
+      "status": "insufficient_evidence",
+      "support_rate": 0.0,
+      "supported_claims": 0,
+      "unsupported_claims": 0,
+      "model_calls": 0,
+      "retrieved_chunks": 0,
+      "latency_ms": 0.029,
+      "correct": true
+    },
+    {
+      "id": "unrelated-algorithm",
+      "question": "请给出快速排序的 Python 实现",
+      "expectation": "insufficient",
+      "expected_sources": [],
+      "citations": [],
+      "resolved_citations": [],
+      "sources": [],
+      "status": "insufficient_evidence",
+      "support_rate": 0.0,
+      "supported_claims": 0,
+      "unsupported_claims": 0,
+      "model_calls": 0,
+      "retrieved_chunks": 0,
+      "latency_ms": 0.035,
+      "correct": true
     }
   ],
-  "success_rate": 1.0,
-  "citation_resolvability": 1.0
+  "verification_probe": {
+    "supported_claims": 1,
+    "unsupported_claims": 2,
+    "support_rate": 0.3333,
+    "status": "partial_support",
+    "verifier_calls": 2,
+    "citations": [
+      "doc-403cd41ed70a:1",
+      "missing:999"
+    ],
+    "citation_resolvability": 0.5,
+    "passed": true,
+    "expectation": "1 supported, 2 unsupported, verifier called twice, and the dangling citation drags citation_resolvability below 1.0"
+  }
 }

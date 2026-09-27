@@ -1,5 +1,146 @@
 [
-  {"question": "What does the document say about evaluation?", "supported": true},
-  {"question": "What is the agent's latency metric?", "supported": true},
-  {"question": "Who won the 2050 election?", "supported": false}
+  {
+    "id": "handbook-thresholds",
+    "question": "智能体发布前必须达到哪些评测阈值？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_evaluation_handbook.md"]
+  },
+  {
+    "id": "handbook-high-risk-approval",
+    "question": "哪些高风险任务在执行前需要人工批准？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_evaluation_handbook.md"]
+  },
+  {
+    "id": "handbook-retry-limit",
+    "question": "工具调用失败后最多可以自动重试几次？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_evaluation_handbook.md"]
+  },
+  {
+    "id": "handbook-insufficient-evidence",
+    "question": "找不到足够证据时，智能体应该怎么做？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_evaluation_handbook.md"]
+  },
+  {
+    "id": "handbook-trace-fields",
+    "question": "运行轨迹需要记录哪些字段，保存多久？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_evaluation_handbook.md"]
+  },
+  {
+    "id": "incident-level-timelines",
+    "question": "P0、P1 和 P2 的确认与处置时限分别是什么？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_incident_policy.txt"]
+  },
+  {
+    "id": "incident-p1-definition",
+    "question": "什么情况下任务失败会被定义为 P1？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_incident_policy.txt"]
+  },
+  {
+    "id": "incident-restore-approval",
+    "question": "P0 事件后恢复工具权限需要谁批准？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_incident_policy.txt"]
+  },
+  {
+    "id": "incident-postmortem",
+    "question": "哪些事件必须进行书面复盘，复盘时限是多少？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_incident_policy.txt"]
+  },
+  {
+    "id": "cross-document-audit-retention",
+    "question": "手册和故障制度对审计材料保存时间的要求是否一致？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_evaluation_handbook.md", "agent_incident_policy.txt"]
+  },
+  {
+    "id": "cross-document-approval",
+    "question": "手册和故障制度分别在什么场景要求人工批准？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_evaluation_handbook.md", "agent_incident_policy.txt"]
+  },
+  {
+    "id": "handbook-metric-definitions",
+    "question": "任务成功率和引用准确率分别按什么口径统计？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_evaluation_handbook.md"]
+  },
+  {
+    "id": "handbook-negative-case-ratio",
+    "question": "负向案例占比不得低于多少，测试集多久更新一次？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_evaluation_handbook.md"]
+  },
+  {
+    "id": "handbook-red-team",
+    "question": "发布前的红队测试要覆盖哪几类风险，攻击样例不得少于多少条？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_evaluation_handbook.md"]
+  },
+  {
+    "id": "handbook-canary-ratio",
+    "question": "灰度发布按什么比例放量，每批之间至少间隔多久？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_evaluation_handbook.md"]
+  },
+  {
+    "id": "handbook-rollback-trigger",
+    "question": "出现什么情况必须立即回滚，回滚后多久要提交复盘？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_evaluation_handbook.md"]
+  },
+  {
+    "id": "handbook-exemption-limit",
+    "question": "评测阈值豁免的有效期最长多久，哪些章节的要求不允许豁免？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_evaluation_handbook.md"]
+  },
+  {
+    "id": "incident-severity-example",
+    "question": "智能体在没有人工批准的情况下删除生产数据，按什么等级处理？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_incident_policy.txt"]
+  },
+  {
+    "id": "incident-p0-committee-notice",
+    "question": "P0 事件必须在多久内向平台治理委员会提交首次进展说明？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_incident_policy.txt"]
+  },
+  {
+    "id": "incident-shift-handover",
+    "question": "值班是怎么安排的，交班记录至少保存多久？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_incident_policy.txt"]
+  },
+  {
+    "id": "cross-document-postmortem-deadline",
+    "question": "手册和故障制度对复盘提交时限的要求分别是什么？",
+    "expectation": "answerable",
+    "expected_sources": ["agent_evaluation_handbook.md", "agent_incident_policy.txt"]
+  },
+  {
+    "id": "unrelated-election",
+    "question": "谁赢得了 2050 年总统选举？",
+    "expectation": "insufficient",
+    "expected_sources": []
+  },
+  {
+    "id": "unrelated-recipe",
+    "question": "如何用慢炖锅制作番茄汤？",
+    "expectation": "insufficient",
+    "expected_sources": []
+  },
+  {
+    "id": "unrelated-algorithm",
+    "question": "请给出快速排序的 Python 实现",
+    "expectation": "insufficient",
+    "expected_sources": []
+  }
 ]
