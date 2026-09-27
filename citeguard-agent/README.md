@@ -25,21 +25,28 @@ BM25 会给任何共享一个词的片段非零分数，光靠排序无法把无
 
 `evals/` 下有 24 条样例，其中 21 条可回答、3 条应判为证据不足，覆盖单文档事实、跨文档对比、无答案问题三类。`evals/run_eval.py` 真实调用 agent 并统计指标，没有任何硬编码数值；跨文档样例只有在引用覆盖全部应引文档时才算正确，答一半不算过。
 
-最近一次离线运行（`mode: mock`，24 条样例）：
+同一套 24 条样例跑了两轮，两组数字分别来自 `evals/report.json`（`mode: mock`）与 `evals/report.live.json`（`mode: live`，`deepseek-chat`）：
 
-| 指标 | 值 |
-| --- | --- |
-| `case_accuracy` | 1.0 |
-| `answerable_grounded_rate` | 1.0 |
-| `insufficient_evidence_rate` | 1.0 |
-| `cross_document_coverage` | 1.0 |
-| `citation_resolvability` | 1.0 |
-| `mean_support_rate` | 0.875 |
-| `unsupported_claims_total` | 0 |
-| `p95_latency_ms` | 0.956 |
-| `model_calls_total` | 42 |
+| 指标 | mock | live |
+| --- | --- | --- |
+| `case_accuracy` | 1.0 | 1.0 |
+| `answerable_grounded_rate` | 1.0 | 1.0 |
+| `insufficient_evidence_rate` | 1.0 | 1.0 |
+| `cross_document_coverage` | 1.0 | 1.0 |
+| `citation_resolvability` | 1.0 | 1.0 |
+| `mean_support_rate` | 0.875 | 0.875 |
+| `unsupported_claims_total` | 0 | 0 |
+| `mean_latency_ms` | 0.471 | 4501.274 |
+| `p95_latency_ms` | 0.956 | 8025.011 |
+| `model_calls_total` | 42 | 68 |
 
-`mean_support_rate` 是 21 条可答案例（各 1.0）与 3 条证据不足案例（各 0.0）的加权结果，不是异常值。离线模式用词面判定代替模型判定，所以这些数字衡量的是检索、核验与统计管线本身，不代表 DeepSeek 的判断质量；真实模型数字需要在有 Key 的环境跑 `--live`。
+`mean_support_rate` 是 21 条可答案例（各 1.0）与 3 条证据不足案例（各 0.0）汇总的结果，两种模式下都是 21/24，不是异常值。
+
+两组比率相同，不代表 live 没有真的调用模型：`model_calls_total` 从 42 升到 68，`mean_latency_ms` 从 0.471 变成 4501，只有真实网络调用会带来这个量级的变化。比率不变来自指标口径——离线客户端每条可答案例只写 1 条 claim（合计 21 条），真实模型在同样的样例上写了 47 条 claim（全部被所指片段支撑，`unsupported_claims_total` 仍为 0），而 `support_rate` 衡量的是结论里未被支撑 claim 的占比，claim 变多不改变取值。引用条数也不一样：mock 41 条、live 25 条，live 的 25 条全部解析回原文。
+
+`verification_probe` 在两种模式下都通过：探针给出 1 条悬空引用（`missing:999`）和 2 条无支撑 claim，核验器把它们判成 1 supported / 2 unsupported，并把 `citation_resolvability` 拉到 0.5。live 模式下这一步由 DeepSeek 完成，说明真实模型同样不会把悬空引用当成有效证据。
+
+离线模式用词面判定代替模型判定，所以 mock 那列衡量的是检索、核验与统计管线本身；live 那列才是 DeepSeek 的端到端表现。
 
 复现真实模型数字只需要两步：在仓库根目录双击 `配置DeepSeek密钥.bat` 存一次 Key（Windows DPAPI 按当前用户加密，明文不落盘），再双击 `运行真实模型评测.bat`。后者等价于
 
@@ -47,7 +54,7 @@ BM25 会给任何共享一个词的片段非零分数，光靠排序无法把无
 powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File tools\deepseek_launcher.ps1 -Mode Eval
 ```
 
-它会解密 Key、把 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL` 与 `CITEGUARD_MOCK=0` 注入当前进程，用本项目 venv 跑 `evals/run_eval.py --live`，结果写到 `evals/report.live.json`，不覆盖上面这份 mock 基线；结束时无论成败都会还原进程内的环境变量。脚本会读回报告校验 `mode`，只要不是 `live` 就直接判失败退出，因此不存在以为是真实数字、其实是离线回放的误读。每次运行会真实调用 DeepSeek，离线基线的 `model_calls_total` 是 42。
+它会解密 Key、把 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL` 与 `CITEGUARD_MOCK=0` 注入当前进程，用本项目 venv 跑 `evals/run_eval.py --live`，结果写到 `evals/report.live.json`，不覆盖上面这份 mock 基线；结束时无论成败都会还原进程内的环境变量。脚本会读回报告校验 `mode`，只要不是 `live` 就直接判失败退出，因此不存在以为是真实数字、其实是离线回放的误读。每次运行都会真实调用 DeepSeek 并覆盖 `evals/report.live.json`。
 
 单元测试 31 项，覆盖分词、BM25 排序、相关性下限、核验状态流转、API 与配置：
 
@@ -76,4 +83,4 @@ uv run --extra dev uvicorn citeguard.api:app --reload --port 8765
 
 ## 边界
 
-CiteGuard 只回答语料里能找到依据的问题，这也正是它会把无关问题判成 `insufficient_evidence` 的原因——这个行为有专门的测试与样例在盯。检索是词面匹配，不做同义改写，也不做向量召回，措辞与原文差得远的问句可能召回不到片段。延迟指标来自离线 mock，不代表接入真实模型后的响应时间。
+CiteGuard 只回答语料里能找到依据的问题，这也正是它会把无关问题判成 `insufficient_evidence` 的原因——这个行为有专门的测试与样例在盯。检索是词面匹配，不做同义改写，也不做向量召回，措辞与原文差得远的问句可能召回不到片段。延迟指标已经分两组记录下来：离线基线是确定性的 0.471 ms，接入 DeepSeek 后是 4501 ms 均值、8025 ms p95，真实延迟由模型侧决定。
