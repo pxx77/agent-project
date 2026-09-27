@@ -1,8 +1,9 @@
 name: CI
 
 # Each job below maps to something this repository actually claims: a Python codebase whose tests
-# pass and whose evaluation numbers reproduce from the committed data, a Windows-only DeepSeek
-# credential launcher, and a repository that tracks no secrets. There is nothing decorative here.
+# pass and whose evaluation numbers reproduce from the committed data, a container image that
+# serves the analysis API without credentials, a Windows-only DeepSeek credential launcher, and a
+# repository that tracks no secrets. There is nothing decorative here.
 on:
   push:
     branches: [main]
@@ -68,6 +69,38 @@ jobs:
             exit 1
           fi
           echo "The working tree is clean."
+
+  container:
+    name: DataPilot container
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Build the image
+        run: docker build --tag datapilot-agent:ci datapilot-agent
+
+      # Started with the image's own defaults: no API key, offline mode. `fixtures/` is not part of
+      # the wheel, so this is also where a broken fixture lookup shows up as a container that never
+      # becomes healthy rather than as a claim in the README.
+      - name: Start the container
+        run: docker run --detach --name datapilot --publish 8766:8766 datapilot-agent:ci
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+
+      # Checks the published port from outside the container. `--no-project` keeps this out of the
+      # project environment: the script only needs an HTTP client.
+      - name: Check the API over HTTP
+        run: uv run --no-project --with httpx==0.28.1 python datapilot-agent/scripts/container_smoke.py --base-url http://127.0.0.1:8766
+
+      - name: Show the container log
+        if: failure()
+        run: docker logs datapilot
+
+      - name: Remove the container
+        if: always()
+        run: docker rm --force datapilot
 
   launcher:
     name: DeepSeek launcher (Windows)

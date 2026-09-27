@@ -3,7 +3,7 @@ import zipfile
 
 import pytest
 
-from datapilot.ingestion import load_bytes, load_fixture
+from datapilot.ingestion import FIXTURES_ENV, fixtures_dir, load_bytes, load_fixture
 
 
 def _minimal_xlsx() -> bytes:
@@ -45,6 +45,25 @@ def test_fixture_has_expected_rows_and_columns():
     handle = load_fixture()
     assert len(handle.rows) == 12
     assert "region" in handle.rows[0]
+
+
+def test_fixture_directory_is_taken_from_the_environment(monkeypatch, tmp_path):
+    """A container installs the package elsewhere and points at its own copy of the data."""
+    copied = tmp_path / "fixtures"
+    copied.mkdir()
+    (copied / "sales.csv").write_text("region,revenue\nEast,1\n", encoding="utf-8")
+
+    monkeypatch.setenv(FIXTURES_ENV, str(copied))
+
+    assert fixtures_dir() == copied
+    assert load_fixture().rows == [{"region": "East", "revenue": "1"}]
+
+
+def test_fixture_name_missing_from_the_resolved_directory_is_reported(monkeypatch, tmp_path):
+    monkeypatch.setenv(FIXTURES_ENV, str(tmp_path))
+
+    with pytest.raises(FileNotFoundError, match="not present"):
+        load_fixture("absent.csv")
 
 
 def test_xlsx_upload_is_readable_with_project_dependencies():
