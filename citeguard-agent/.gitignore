@@ -1,4 +1,6 @@
 .env
+.env.*
+!.env.example
 .venv/
 __pycache__/
 *.py[cod]
@@ -6,3 +8,18 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+.streamlit/secrets.toml
+local-secrets/
+.local-secrets/
+.secrets/
+secrets/
+*.dpapi
+*.secret
+*.secrets
+*.key
+*.pem
+*.pfx
+*.p12
+credentials.json
+*.credentials
+*.log

@@ -1,2 +1,46 @@
 .worktrees/
 .superpowers/
+
+# Local environments and generated Python files
+.venv/
+**/.venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+**/.pytest_cache/
+*.egg-info/
+**/*.egg-info/
+dist/
+build/
+
+# Personal documents kept out of the public repository
+实习简历_更新版.docx
+常见问题.txt
+docs/superpowers/**/*.docx
+
+# Secrets and machine-local configuration
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+.streamlit/secrets.toml
+**/.streamlit/secrets.toml
+local-secrets/
+.local-secrets/
+.secrets/
+secrets/
+*.dpapi
+*.secret
+*.secrets
+*.key
+*.pem
+*.pfx
+*.p12
+credentials.json
+*.credentials
+
+# Local runtime output
+*.log
