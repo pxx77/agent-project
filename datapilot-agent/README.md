@@ -51,7 +51,7 @@ powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File tools\deepseek_launc
 
 它会解密 Key、把 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL` 与 `DATAPILOT_MOCK=0` 注入当前进程，用本项目 venv 跑 `evals/run_eval.py --live`，结果写到 `evals/report.live.json`，不覆盖上面这份 mock 基线；结束时无论成败都会还原进程内的环境变量。脚本会读回报告校验 `mode`，只要不是 `live` 就直接判失败退出，因此不存在以为是真实数字、其实是离线回放的误读。注意 live 只换掉 mock 类样例的 SQL 生成，scripted 类样例仍是脚本化探针，所以 `repair_success_rate`、`bounded_failure_rate` 由管线决定，而 `unsafe_block_rate` 的分母里有 2 条 mock 类危险请求，会随模型行为变化。
 
-单元测试 40 项，覆盖只读策略、执行、修复重试、字段画像、API、配置与 MCP server：
+单元测试 42 项，覆盖只读策略、执行、修复重试、字段画像、数据载入、API、配置与 MCP server：
 
 ```bash
 uv run --extra dev pytest -q
@@ -75,6 +75,19 @@ uv run --extra dev uvicorn datapilot.api:app --reload --port 8766
 浏览器打开 `http://127.0.0.1:8766/docs` 可直接上传数据并提问，接口是 `/health`、`/profile`、`/ask` 三个：先 `POST /profile` 上传文件并看字段画像，再 `POST /ask` 提交问题。Streamlit 界面入口是 `src/datapilot/ui.py`，默认端口 8501，可以查看字段画像、生成的 SQL、结果表格与运行轨迹。仓库根目录的 `一键启动两个项目.bat` 会同时拉起两个项目。
 
 支持 CSV、XLSX、SQLite，单次载入行数默认上限 1000，由 `MAX_ROWS` 控制。
+
+## 容器
+
+`Dockerfile` 构建的镜像以离线模式跑同一个 API，不需要任何 Key：
+
+```bash
+docker build -t datapilot-agent .
+docker run --publish 8766:8766 datapilot-agent
+```
+
+镜像基于 `python:3.12-slim`，以非 root 用户运行。`fixtures/` 不是 Python 包，不会被打进 wheel，而 `pip install .` 之后包位于 `site-packages`，`Path(__file__).parents[2]` 不再指向项目根目录，所以镜像把数据 `COPY` 到 `/app/fixtures` 并用 `DATAPILOT_FIXTURES` 指明位置；`load_fixture` 依次尝试该变量、从模块位置逐级上溯、以及当前工作目录。接 DeepSeek 时传入 `-e DATAPILOT_MOCK=0 -e DEEPSEEK_API_KEY=...`。
+
+CI 会真实构建镜像、按镜像自带的环境变量启动容器，再用 `scripts/container_smoke.py` 从容器外访问已发布端口，核对 `/health` 的离线状态、`/profile` 的字段画像，以及 `/ask` 生成的 SQL、按地区聚合的结果与图表规格共 16 项断言。容器支持因此由每次提交的构建与运行结果证实。
 
 ## MCP
 
