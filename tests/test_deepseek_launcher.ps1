@@ -216,7 +216,13 @@ function Test-GitIgnored {
     )
 
     & git -C $root check-ignore --quiet -- $Path
-    return $LASTEXITCODE -eq 0
+    $ignored = $LASTEXITCODE -eq 0
+
+    # `git check-ignore` exits 1 when the path is *not* ignored. That is a normal answer here, not a
+    # failure, but it would otherwise be left behind in $LASTEXITCODE and be mistaken for this
+    # script's own result, so clear it before returning.
+    $global:LASTEXITCODE = 0
+    return $ignored
 }
 
 foreach ($sensitivePath in @(
@@ -238,3 +244,9 @@ foreach ($examplePath in @(
 }
 
 Write-Host "PASS: $script:Assertions launcher assertions"
+
+# Exit explicitly. CI runs this file through the `powershell` shell, whose wrapper appends
+# `if ((Test-Path -LiteralPath variable:\LASTEXITCODE)) { exit $LASTEXITCODE }`, so without this the
+# step's result would depend on the last native command the assertions happened to run rather than
+# on the assertions themselves.
+exit 0
