@@ -2,7 +2,7 @@
 
 Date: 2026-08-27
 
-> 实现现状（2026-09-27 更新）：本文件记录当天的设计意图，部分技术选型在实现时被替换（DataPilot 由 DuckDB 改为内存 SQLite，CiteGuard 的检索改为自行实现的 Okapi BM25）。两个项目当前的能力与评测数字分别以各自的 `README.md` 为准。
+> 实现现状（2026-09-27 更新）：本文件记录当天的设计意图，部分技术选型在实现时被替换（DataPilot 由 DuckDB 改为内存 SQLite，编排改为 LangGraph `StateGraph`，CiteGuard 的检索改为自行实现的 Okapi BM25）。两个项目当前的能力与评测数字分别以各自的 `README.md` 为准。
 
 ## Objective
 

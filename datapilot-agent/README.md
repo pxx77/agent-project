@@ -4,7 +4,7 @@ DataPilot is a safe SQL data analysis agent. 上传 CSV、XLSX 或 SQLite 文件
 
 ## 它做什么
 
-一次完整运行包含四步：剖析字段画像、生成 SQL、通过只读策略后执行、把结果整理成图表规格与结论。生成的 SQL 不会直接执行——先过一遍策略检查，只允许单条以 `SELECT` 或 `WITH` 开头的语句；`INSERT`、`UPDATE`、`DELETE`、`DROP`、`CREATE`、`PRAGMA`、`ATTACH`、`COPY` 等写操作与文件读取函数（`read_csv`、`read_parquet`、`httpfs`、`glob`）一律拒绝，多语句同样拒绝。
+一次完整运行是一条 LangGraph `StateGraph`：剖析字段画像 → 生成 SQL → 只读策略检查 → 执行 → 整理成图表规格与结论，其中策略检查与执行各带一条条件边，执行失败时回到修复节点重新执行（见下方「编排」）。生成的 SQL 不会直接执行——先过一遍策略检查，只允许单条以 `SELECT` 或 `WITH` 开头的语句；`INSERT`、`UPDATE`、`DELETE`、`DROP`、`CREATE`、`PRAGMA`、`ATTACH`、`COPY` 等写操作与文件读取函数（`read_csv`、`read_parquet`、`httpfs`、`glob`）一律拒绝，多语句同样拒绝。
 
 执行走内存 SQLite：上传的数据被载入一张临时表，查询结束后连接立即关闭，不在磁盘留副本。DataPilot 不执行模型生成的 Python 代码——结论只由查询结果和字段画像推导。
 
@@ -14,7 +14,20 @@ DataPilot is a safe SQL data analysis agent. 上传 CSV、XLSX 或 SQLite 文件
 
 SQL 执行出错时，错误信息与失败语句会一起回灌给模型，让它基于真实报错改写，而不是重新猜。修复循环最多跑 `MAX_RETRIES` 次（默认 2），改写结果与上一次相同时提前退出，避免空转。
 
+这条循环在图上是一条真实的回边：`repair` 的固定边重新指向 `execute`，而进入 `repair` 与否由 `execute` 后的条件路由决定；改写无进展或重试耗尽时，路由改走 `visualize` 收尾。
+
 策略拒绝和可修复错误是两回事：被策略拦下的查询属于预期行为，不做重试；只有真正的执行错误才进入修复循环。两次修复都不成功时，agent 返回失败状态并保留最后一条 SQL 与错误信息，不会静默返回一个空结果。
+
+## 编排
+
+管线由 `langgraph` 编译成一个 `StateGraph`，定义在 `src/datapilot/workflow.py`。节点 7 个：`profile`、`plan`、`policy`、`execute`、`repair`、`visualize`、`verify`。固定边串起主干，两处条件边构成分支：
+
+- `policy` 后分两路：策略放行的语句去 `execute`，被拦下的直接去 `visualize`——被拒绝的语句因此不会进入执行节点。
+- `execute` 后分两路：属于可修复的执行错误、且未达重试上限时回到 `repair`，再由 `repair → execute` 这条固定回边重跑；其余情况（执行成功、策略拦截、重试耗尽、改写无进展）一律去 `visualize`。
+
+`trace.states` 记的是这次运行真正访问过的节点序列，不是预先写死的清单：它由图状态里的 reducer 累积，节点每被访问一次就追加一次自己的名字。所以一次修好再跑通的运行是 `["profile", "plan", "policy", "execute", "repair", "execute", "visualize", "verify"]`，被策略直接拦下的是 `["profile", "plan", "policy", "visualize", "verify"]`。
+
+这些不是文档里的说法，而是测试锁住的：`tests/test_workflow.py` 从编译后的图上直接读节点与边，断言两条条件边与 `repair → execute` 回边确实存在，并逐项比对上面两条序列。`uv run --extra dev pytest -q` 即可复现。
 
 ## 评估
 
@@ -30,8 +43,8 @@ SQL 执行出错时，错误信息与失败语句会一起回灌给模型，让�
 | `unsafe_block_rate` | 1.0 | 0.75 |
 | `repair_success_rate` | 1.0 | 1.0 |
 | `bounded_failure_rate` | 1.0 | 1.0 |
-| `mean_latency_ms` | 0.315 | 569.787 |
-| `p95_latency_ms` | 0.916 | 1623.808 |
+| `mean_latency_ms` | 2.189 | 569.787 |
+| `p95_latency_ms` | 3.375 | 1623.808 |
 | `model_calls_total` | 17 | 17 |
 
 live 下 14 条样例有 3 条未通过，原因都留在报告里：
@@ -41,7 +54,7 @@ live 下 14 条样例有 3 条未通过，原因都留在报告里：
 
 后两条暴露的是评测口径问题，不是防线被绕过：8 条危险样例里需要策略层拦截的 6 条（`policy-insert`、`policy-update`、`policy-multi-statement`、`policy-pragma`、`policy-file-read`、`policy-non-select`）全部拦下，`repair_success_rate` 与 `bounded_failure_rate` 在 live 下仍是 1.0。`unsafe_block_rate` 的分母含 2 条 mock 类危险请求，「模型自己拒答」会绕过策略层，所以这个指标会随模型行为波动——模型侧拒答与策略侧拦截是两道不同的防线，当前把两者算进了同一个分母。
 
-离线模式下 mock 类样例使用确定性模板客户端，scripted 类样例使用脚本化 SQL 探针，所以 mock 那列衡量的是管线本身（只读策略、执行、修复重试、图表、结论、核验），不是模型写 SQL 的质量。mock 那列的延迟是亚毫秒级读数，随机器与负载浮动，`tools/check_eval_drift.py` 因此把它排除在逐字段比对之外——它在这里的作用只是与 live 形成对照，不是一个稳定指标。
+离线模式下 mock 类样例使用确定性模板客户端，scripted 类样例使用脚本化 SQL 探针，所以 mock 那列衡量的是管线本身（只读策略、执行、修复重试、图表、结论、核验），不是模型写 SQL 的质量。mock 那列的延迟是毫秒级读数——管线自己走一遍的时间，不含真实网络调用——随机器与负载浮动，`tools/check_eval_drift.py` 因此把它排除在逐字段比对之外；它在这里的作用只是与 live 形成对照，不是一个稳定指标。改成 LangGraph 编排后这份基线重跑过一次：除延迟外的指标逐字段一致，延迟整体上移 1 至 3 毫秒，多出来的部分是节点间状态传递与条件路由的固定开销。
 
 ### Token 与费用
 
@@ -63,7 +76,7 @@ powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -File tools\deepseek_launc
 
 它会解密 Key、把 `DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL`、`DEEPSEEK_MODEL` 与 `DATAPILOT_MOCK=0` 注入当前进程，用本项目 venv 跑 `evals/run_eval.py --live`，结果写到 `evals/report.live.json`，不覆盖上面这份 mock 基线；结束时无论成败都会还原进程内的环境变量。脚本会读回报告校验 `mode`，只要不是 `live` 就直接判失败退出，因此不存在以为是真实数字、其实是离线回放的误读。注意 live 只换掉 mock 类样例的 SQL 生成，scripted 类样例仍是脚本化探针，所以 `repair_success_rate`、`bounded_failure_rate` 由管线决定，而 `unsafe_block_rate` 的分母里有 2 条 mock 类危险请求，会随模型行为变化。
 
-单元测试 63 项，覆盖只读策略、执行、修复重试、字段画像、数据载入、价格表与成本核算、API、配置与 MCP server：
+单元测试 66 项，覆盖编排图拓扑、只读策略、执行、修复重试、字段画像、数据载入、价格表与成本核算、API、配置与 MCP server：
 
 ```bash
 uv run --extra dev pytest -q

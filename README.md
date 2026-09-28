@@ -10,7 +10,7 @@ CiteGuard is an evidence-grounded citation verification agent. 答案里每条�
 
 ### DataPilot
 
-DataPilot is a safe SQL data analysis agent. 上传 CSV、XLSX 或 SQLite 后用自然语言提问，生成的 SQL 先过只读策略再执行，失败时带着真实报错重试，最后给出图表规格与结论。执行走内存 SQLite，不跑模型生成的 Python，连接用完即关。每次运行按官方单价折算 token 与费用，估算与实测分开标记。14 条评测样例，63 项单元测试，另有 `Dockerfile` 构建的离线镜像。细节见 [datapilot-agent/README.md](datapilot-agent/README.md)。
+DataPilot is a safe SQL data analysis agent. 上传 CSV、XLSX 或 SQLite 后用自然语言提问，生成的 SQL 先过只读策略再执行，失败时带着真实报错重试，最后给出图表规格与结论。管线是一条 LangGraph `StateGraph`（7 个节点、两处条件边、一条 `execute → repair → execute` 回边），`trace.states` 记录的是这次运行真实访问过的节点序列。执行走内存 SQLite，不跑模型生成的 Python，连接用完即关。每次运行按官方单价折算 token 与费用，估算与实测分开标记。14 条评测样例，66 项单元测试，另有 `Dockerfile` 构建的离线镜像。细节见 [datapilot-agent/README.md](datapilot-agent/README.md)。
 
 ## 快速开始
 
@@ -40,11 +40,11 @@ DataPilot is a safe SQL data analysis agent. 上传 CSV、XLSX 或 SQLite 后用
 | 项目 | 样例 | 单元测试 | `case_accuracy` mock | `case_accuracy` live | `tokens_total` mock | `cost_cny_total` mock | `mean_latency_ms` mock | `mean_latency_ms` live | `model_calls_total` mock | `model_calls_total` live |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | CiteGuard | 24 | 94 | 1.0 | 1.0 | 56463 | 0.07148 | 0.654 | 4501.274 | 42 | 68 |
-| DataPilot | 14 | 63 | 1.0 | 0.7857 | 4442 | 0.004865 | 0.315 | 569.787 | 17 | 17 |
+| DataPilot | 14 | 66 | 1.0 | 0.7857 | 4442 | 0.004865 | 2.189 | 569.787 | 17 | 17 |
 
 mock 那列衡量的是管线本身——离线客户端用词面判定或脚本化探针替代模型——live 那列才是模型端到端表现。CiteGuard 两轮比率相同但模型调用数从 42 升到 68、延迟从 0.654 ms 变成 4501 ms，只有真实网络调用会带来这个量级的变化；DataPilot live 有 3 条样例未通过，两条是模型没照做破坏性语句、被自身改写成了只读查询，一条是聚合结果缺 `ORDER BY`，这些都逐条写在项目 README 里，没有被抹平。
 
-token 与费用来自同一批运行结果：离线回放没有真实计费，token 数按官方字符换算比例在本机估算、按官方单价折算成元，报告里 `usage_measured` 为 `false`，只作量级参考；接入 DeepSeek 后改取响应体的 `usage` 字段、标记为实测，两者从不混用。mock 那列的延迟是亚毫秒级读数、随机器浮动，`tools/check_eval_drift.py` 因此把它排除在逐字段比对之外。
+token 与费用来自同一批运行结果：离线回放没有真实计费，token 数按官方字符换算比例在本机估算、按官方单价折算成元，报告里 `usage_measured` 为 `false`，只作量级参考；接入 DeepSeek 后改取响应体的 `usage` 字段、标记为实测，两者从不混用。mock 那列的延迟都是毫秒量级、随机器与负载浮动，`tools/check_eval_drift.py` 因此把它排除在逐字段比对之外。
 
 两份 live 报告的 `mode` 字段都会被回读校验，不是 `live` 就直接判失败，所以不会出现以为是真实数字、其实是离线回放的误读。
 
@@ -65,7 +65,7 @@ token 与费用来自同一批运行结果：离线回放没有真实计费，to
 
 ```
 citeguard-agent/    CiteGuard：检索、核验、API、Streamlit 界面、MCP server
-datapilot-agent/    DataPilot：只读策略、执行、修复重试、API、界面、MCP server、Dockerfile
+datapilot-agent/    DataPilot：LangGraph 编排、只读策略、执行、修复重试、API、界面、MCP server、Dockerfile
 tools/              deepseek_launcher.ps1（启动与密钥）与 check_eval_drift.py（评测漂移）
 tests/              启动脚本的断言
 docs/superpowers/   两个项目的设计与实施记录

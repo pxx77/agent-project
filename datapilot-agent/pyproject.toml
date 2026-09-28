@@ -7,7 +7,10 @@ name = "datapilot"
 version = "0.1.0"
 description = "Safe SQL data analysis agent"
 requires-python = ">=3.11"
-dependencies = ["fastapi==0.116.1", "httpx==0.28.1", "python-multipart==0.0.20", "pydantic==2.11.7", "streamlit==1.48.0", "pandas==2.3.2", "openpyxl==3.1.5", "uvicorn==0.35.0"]
+# langgraph is a core dependency, not an extra: Dockerfile installs the package with a bare
+# `pip install .` and the API process imports the graph at import time, so an extra would break
+# both the container and the deploy path.
+dependencies = ["fastapi==0.116.1", "httpx==0.28.1", "python-multipart==0.0.20", "pydantic==2.11.7", "streamlit==1.48.0", "pandas==2.3.2", "openpyxl==3.1.5", "uvicorn==0.35.0", "langgraph==1.2.12"]
 
 [project.optional-dependencies]
 # sse-starlette is pinned because mcp pulls sse-starlette>=3, which would drag in

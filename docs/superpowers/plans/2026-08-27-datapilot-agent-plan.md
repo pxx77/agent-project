@@ -1,6 +1,6 @@
 # DataPilot Agent Implementation Plan
 
-> 实现现状（2026-09-27 更新）：本文件是当天的初始计划，最终交付与其有两处差异——执行引擎是内存 SQLite 而不是 DuckDB，策略检查用正则黑名单而不是 sqlglot 解析。当前能力与真实评测数字以 `datapilot-agent/README.md` 为准。
+> 实现现状（2026-09-27 更新）：本文件是当天的初始计划，最终交付与其有三处差异——执行引擎是内存 SQLite 而不是 DuckDB，策略检查用正则黑名单而不是 sqlglot 解析，编排最终改用 LangGraph `StateGraph`（7 个节点、两处条件边、一条 `execute → repair → execute` 回边）而不是手写的串行流程。当前能力与真实评测数字以 `datapilot-agent/README.md` 为准。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
